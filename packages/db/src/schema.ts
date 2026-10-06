@@ -34,6 +34,10 @@ export const globalSettings = pgTable("global_settings", {
     .notNull()
     .default("UtilityX is currently undergoing maintenance. Commands are temporarily unavailable."),
 
+  maintenanceNotificationState: boolean("maintenance_notification_state")
+    .notNull()
+    .default(false),
+
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

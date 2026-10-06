@@ -1,0 +1,1 @@
+ALTER TABLE "global_settings" ADD COLUMN "maintenance_notification_state" boolean DEFAULT false NOT NULL;

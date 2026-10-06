@@ -12,6 +12,8 @@ import {
   globalSettings,
 } from "@utilityx/db";
 
+import { eq } from "drizzle-orm";
+
 import {
   data as pingData,
   execute as executePing,
@@ -37,6 +39,101 @@ const client = new Client({
 });
 
 const rest = new REST({ version: "10" }).setToken(token);
+
+let checkingMaintenance = false;
+
+async function notifyGuildOwners(
+  maintenanceEnabled: boolean,
+  maintenanceMessage: string
+) {
+  console.log(
+    `Sending maintenance ${
+      maintenanceEnabled ? "enabled" : "disabled"
+    } notifications to server owners...`
+  );
+
+  for (const guild of client.guilds.cache.values()) {
+    try {
+      const owner = await guild.fetchOwner();
+
+      if (maintenanceEnabled) {
+        await owner.send({
+          content:
+            `⚠️ **UtilityX Maintenance Notice**\n\n` +
+            `${maintenanceMessage}\n\n` +
+            `Your server **${guild.name}** will temporarily be unable to use normal UtilityX commands.\n\n` +
+            `You do not need to remove or reconfigure UtilityX. Service will resume when maintenance is complete.`,
+        });
+      } else {
+        await owner.send({
+          content:
+            `✅ **UtilityX Maintenance Complete**\n\n` +
+            `UtilityX maintenance has ended and normal commands are available again in **${guild.name}**.\n\n` +
+            `No action is required.`,
+        });
+      }
+
+      console.log(
+        `Maintenance notification sent to owner of ${guild.name}.`
+      );
+    } catch (error) {
+      console.warn(
+        `Could not notify owner of ${guild.name}:`,
+        error
+      );
+    }
+  }
+}
+
+async function checkMaintenanceState() {
+  if (checkingMaintenance) return;
+
+  checkingMaintenance = true;
+
+  try {
+    const [settings] = await db
+      .select()
+      .from(globalSettings)
+      .where(eq(globalSettings.id, "global"))
+      .limit(1);
+
+    if (!settings) {
+      return;
+    }
+
+    if (
+      settings.maintenanceEnabled ===
+      settings.maintenanceNotificationState
+    ) {
+      return;
+    }
+
+    await notifyGuildOwners(
+      settings.maintenanceEnabled,
+      settings.maintenanceMessage
+    );
+
+    await db
+      .update(globalSettings)
+      .set({
+        maintenanceNotificationState:
+          settings.maintenanceEnabled,
+        updatedAt: new Date(),
+      })
+      .where(eq(globalSettings.id, "global"));
+
+    console.log(
+      `Maintenance notification state updated to ${settings.maintenanceEnabled}.`
+    );
+  } catch (error) {
+    console.error(
+      "Failed to process maintenance notifications:",
+      error
+    );
+  } finally {
+    checkingMaintenance = false;
+  }
+}
 
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`UtilityX bot ready as ${readyClient.user.tag}`);
@@ -78,6 +175,12 @@ client.once(Events.ClientReady, async (readyClient) => {
   } catch (error) {
     console.error("Failed to sync Discord guilds:", error);
   }
+
+  await checkMaintenanceState();
+
+  setInterval(() => {
+    void checkMaintenanceState();
+  }, 30_000);
 });
 
 client.on(Events.GuildCreate, async (guild) => {
@@ -109,6 +212,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const [settings] = await db
       .select()
       .from(globalSettings)
+      .where(eq(globalSettings.id, "global"))
       .limit(1);
 
     if (
