@@ -10,6 +10,8 @@ type DiscordUser = {
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
+  const state = request.nextUrl.searchParams.get("state");
+  const savedState = request.cookies.get("utilityx_oauth_state")?.value;
 
   const clientId = process.env.DISCORD_CLIENT_ID;
   const clientSecret = process.env.DISCORD_CLIENT_SECRET;
@@ -19,6 +21,13 @@ export async function GET(request: NextRequest) {
   if (!code) {
     return NextResponse.json(
       { error: "Missing Discord authorization code." },
+      { status: 400 }
+    );
+  }
+
+  if (!state || !savedState || state !== savedState) {
+    return NextResponse.json(
+      { error: "Invalid OAuth state." },
       { status: 400 }
     );
   }
@@ -103,6 +112,8 @@ export async function GET(request: NextRequest) {
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });
+
+    response.cookies.delete("utilityx_oauth_state");
 
     return response;
   } catch (error) {
