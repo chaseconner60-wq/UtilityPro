@@ -1,8 +1,8 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
-import { sql } from "drizzle-orm";
-import { db } from "@utilityx/db";
+import { eq, sql } from "drizzle-orm";
+import { db, guilds } from "@utilityx/db";
 
 const app = Fastify({
   logger: true
@@ -27,6 +27,27 @@ app.get("/health/database", async () => {
   return {
     status: "ok",
     database: "connected"
+  };
+});
+
+
+app.get<{ Params: { id: string } }>("/guilds/:id", async (request, reply) => {
+  const { id } = request.params;
+
+  const [guild] = await db
+    .select()
+    .from(guilds)
+    .where(eq(guilds.id, id))
+    .limit(1);
+
+  if (!guild) {
+    return reply.code(404).send({
+      error: "Guild not found"
+    });
+  }
+
+  return {
+    guild
   };
 });
 
