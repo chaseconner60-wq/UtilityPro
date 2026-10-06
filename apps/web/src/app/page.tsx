@@ -1,69 +1,81 @@
-import Image from "next/image";
-
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-[#08090c] text-white">
+      <nav className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6">
+        <div className="text-xl font-bold tracking-tight">
+          Utility<span className="text-indigo-400">X</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
+
+        <div className="flex items-center gap-3">
           <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#features"
+            className="hidden text-sm text-zinc-400 transition hover:text-white sm:block"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
+            Features
           </a>
+
           <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/login"
+            className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200"
           >
-            Documentation
+            Dashboard
           </a>
         </div>
-      </main>
-    </div>
+      </nav>
+
+      <section className="mx-auto flex min-h-[75vh] w-full max-w-7xl flex-col items-center justify-center px-6 py-24 text-center">
+        <div className="mb-6 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-4 py-1.5 text-sm text-indigo-300">
+          Discord management, simplified.
+        </div>
+
+        <h1 className="max-w-4xl text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl">
+          Everything your Discord
+          <span className="block text-indigo-400">server needs.</span>
+        </h1>
+
+        <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-400">
+          Manage moderation, tickets, logging, welcome systems, automation,
+          server settings, and more from one powerful dashboard.
+        </p>
+
+        <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+          <a
+            href="/login"
+            className="rounded-xl bg-indigo-500 px-6 py-3 font-semibold transition hover:bg-indigo-400"
+          >
+            Open Dashboard
+          </a>
+
+          <a
+            href="#features"
+            className="rounded-xl border border-white/10 bg-white/5 px-6 py-3 font-semibold text-zinc-300 transition hover:bg-white/10 hover:text-white"
+          >
+            Explore Features
+          </a>
+        </div>
+      </section>
+
+      <section
+        id="features"
+        className="mx-auto grid w-full max-w-7xl gap-4 px-6 pb-24 md:grid-cols-3"
+      >
+        {[
+          ["Moderation", "Powerful tools to help your staff manage your community."],
+          ["Tickets", "Create organized support systems directly inside Discord."],
+          ["Logging", "Keep track of important server activity and moderation events."],
+          ["Welcome Systems", "Customize welcome messages, goodbye messages, and roles."],
+          ["Automation", "Reduce repetitive work with configurable server automation."],
+          ["Web Dashboard", "Configure UtilityX without digging through endless commands."],
+        ].map(([title, description]) => (
+          <div
+            key={title}
+            className="rounded-2xl border border-white/10 bg-white/[0.03] p-6"
+          >
+            <h2 className="text-lg font-semibold">{title}</h2>
+            <p className="mt-2 leading-7 text-zinc-400">{description}</p>
+          </div>
+        ))}
+      </section>
+    </main>
   );
 }
