@@ -22,3 +22,19 @@ export const guilds = pgTable("guilds", {
     .notNull()
     .defaultNow(),
 });
+
+export const globalSettings = pgTable("global_settings", {
+  id: text("id").primaryKey(),
+
+  maintenanceEnabled: boolean("maintenance_enabled")
+    .notNull()
+    .default(false),
+
+  maintenanceMessage: text("maintenance_message")
+    .notNull()
+    .default("UtilityX is currently undergoing maintenance. Commands are temporarily unavailable."),
+
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

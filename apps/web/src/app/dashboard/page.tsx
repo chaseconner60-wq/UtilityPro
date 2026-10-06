@@ -65,6 +65,17 @@ export default async function Dashboard() {
           </div>
         </div>
 
+        {session.discordId === process.env.BOT_OWNER_ID && (
+          <div className="mt-8">
+            <a
+              href="/dashboard/admin"
+              className="inline-flex rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-5 py-3 text-sm font-semibold text-indigo-300 hover:bg-indigo-500/20"
+            >
+              UtilityX Owner Controls
+            </a>
+          </div>
+        )}
+
         <GuildList />
       </section>
     </main>

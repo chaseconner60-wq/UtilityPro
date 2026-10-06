@@ -6,7 +6,7 @@ import {
   Routes,
 } from "discord.js";
 
-import { db, guilds } from "@utilityx/db";
+import { db, guilds, globalSettings } from "@utilityx/db";
 import { data as pingData, execute as executePing } from "./commands/ping.js";
 
 const token = process.env.DISCORD_TOKEN;
