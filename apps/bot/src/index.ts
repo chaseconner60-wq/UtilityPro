@@ -6,15 +6,30 @@ import {
   Routes,
 } from "discord.js";
 
-import { db, guilds, globalSettings } from "@utilityx/db";
-import { data as pingData, execute as executePing } from "./commands/ping.js";
+import {
+  db,
+  guilds,
+  globalSettings,
+} from "@utilityx/db";
+
+import {
+  data as pingData,
+  execute as executePing,
+} from "./commands/ping.js";
 
 const token = process.env.DISCORD_TOKEN;
+const ownerId = process.env.BOT_OWNER_ID;
 const clientId = "1548859144566480926";
 
 if (!token) {
   console.error("DISCORD_TOKEN is not configured.");
   process.exit(1);
+}
+
+if (!ownerId) {
+  console.warn(
+    "BOT_OWNER_ID is not configured. Owner bypass will not work."
+  );
 }
 
 const client = new Client({
@@ -91,11 +106,38 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   try {
+    const [settings] = await db
+      .select()
+      .from(globalSettings)
+      .limit(1);
+
+    if (
+      settings?.maintenanceEnabled &&
+      interaction.user.id !== ownerId
+    ) {
+      await interaction.reply({
+        content:
+          settings.maintenanceMessage ||
+          "UtilityX is currently undergoing maintenance. Commands are temporarily unavailable.",
+        ephemeral: true,
+      });
+
+      console.log(
+        `Blocked /${interaction.commandName} from ${interaction.user.tag} during maintenance.`
+      );
+
+      return;
+    }
+
     if (interaction.commandName === "ping") {
       await executePing(interaction);
+      return;
     }
   } catch (error) {
-    console.error(`Error executing /${interaction.commandName}:`, error);
+    console.error(
+      `Error executing /${interaction.commandName}:`,
+      error
+    );
 
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp({
