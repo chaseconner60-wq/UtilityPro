@@ -31,6 +31,19 @@ app.get("/health/database", async () => {
 });
 
 
+app.get("/guilds", async () => {
+  const installedGuilds = await db
+    .select({
+      id: guilds.id,
+      name: guilds.name,
+    })
+    .from(guilds);
+
+  return {
+    guilds: installedGuilds,
+  };
+});
+
 app.get<{ Params: { id: string } }>("/guilds/:id", async (request, reply) => {
   const { id } = request.params;
 
