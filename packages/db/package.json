@@ -4,11 +4,15 @@
   "version": "1.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "migrate": "drizzle-kit migrate"
+    "migrate": "drizzle-kit migrate",
+    "build": "tsc"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.3",
@@ -18,5 +22,7 @@
     "@types/node": "^24.0.0",
     "drizzle-kit": "^0.31.4",
     "typescript": "^5.9.3"
-  }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts"
 }
