@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
       .sign(secret);
 
     const response = NextResponse.redirect(
-      new URL("/dashboard", request.nextUrl.origin)
+      new URL("/dashboard", redirectUri)
     );
 
     response.cookies.set("utilityx_session", session, {
