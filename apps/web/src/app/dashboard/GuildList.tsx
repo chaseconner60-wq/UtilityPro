@@ -7,6 +7,7 @@ type Guild = {
   name: string;
   icon: string | null;
   owner: boolean;
+  installed: boolean;
 };
 
 export default function GuildList() {
@@ -103,12 +104,21 @@ export default function GuildList() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold transition hover:bg-indigo-400"
-              >
-                Select
-              </button>
+              {guild.installed ? (
+                <a
+                  href={`/dashboard/guilds/${guild.id}`}
+                  className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold transition hover:bg-indigo-400"
+                >
+                  Manage
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-300 transition hover:bg-white/10 hover:text-white"
+                >
+                  Add UtilityX
+                </button>
+              )}
             </div>
           );
         })}

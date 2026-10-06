@@ -9,11 +9,17 @@ type DiscordGuild = {
   permissions: string;
 };
 
+type InstalledGuild = {
+  id: string;
+  name: string;
+};
+
 const ADMINISTRATOR = BigInt("8");
 const MANAGE_GUILD = BigInt("32");
 
 export async function GET(request: NextRequest) {
   const sessionCookie = request.cookies.get("utilityx_session");
+  const apiUrl = process.env.UTILITYX_API_URL;
 
   if (!sessionCookie) {
     return NextResponse.json(
@@ -22,18 +28,28 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  if (!apiUrl) {
+    return NextResponse.json(
+      { error: "UtilityX API is not configured." },
+      { status: 500 }
+    );
+  }
+
   try {
     const session = await decryptSession(sessionCookie.value);
 
-    const discordResponse = await fetch(
-      "https://discord.com/api/users/@me/guilds",
-      {
+    const [discordResponse, installedResponse] = await Promise.all([
+      fetch("https://discord.com/api/users/@me/guilds", {
         headers: {
           Authorization: `Bearer ${session.accessToken}`,
         },
         cache: "no-store",
-      }
-    );
+      }),
+
+      fetch(`${apiUrl}/guilds`, {
+        cache: "no-store",
+      }),
+    ]);
 
     if (!discordResponse.ok) {
       console.error(
@@ -47,7 +63,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (!installedResponse.ok) {
+      console.error(
+        "Installed guild request failed:",
+        installedResponse.status
+      );
+
+      return NextResponse.json(
+        { error: "Unable to retrieve installed UtilityX servers." },
+        { status: 502 }
+      );
+    }
+
     const guilds = (await discordResponse.json()) as DiscordGuild[];
+
+    const installedData = (await installedResponse.json()) as {
+      guilds: InstalledGuild[];
+    };
+
+    const installedIds = new Set(
+      installedData.guilds.map((guild) => guild.id)
+    );
 
     const manageableGuilds = guilds
       .filter((guild) => {
@@ -64,8 +100,15 @@ export async function GET(request: NextRequest) {
         name: guild.name,
         icon: guild.icon,
         owner: guild.owner,
+        installed: installedIds.has(guild.id),
       }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => {
+        if (a.installed !== b.installed) {
+          return a.installed ? -1 : 1;
+        }
+
+        return a.name.localeCompare(b.name);
+      });
 
     return NextResponse.json({
       guilds: manageableGuilds,
