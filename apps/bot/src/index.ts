@@ -6,6 +6,7 @@ import {
   Routes,
 } from "discord.js";
 
+import { db, guilds } from "@utilityx/db";
 import { data as pingData, execute as executePing } from "./commands/ping.js";
 
 const token = process.env.DISCORD_TOKEN;
@@ -35,6 +36,54 @@ client.once(Events.ClientReady, async (readyClient) => {
     console.log("UtilityX slash commands registered.");
   } catch (error) {
     console.error("Failed to register slash commands:", error);
+  }
+
+  try {
+    console.log("Syncing Discord guilds with database...");
+
+    for (const guild of readyClient.guilds.cache.values()) {
+      await db
+        .insert(guilds)
+        .values({
+          id: guild.id,
+          name: guild.name,
+        })
+        .onConflictDoUpdate({
+          target: guilds.id,
+          set: {
+            name: guild.name,
+            updatedAt: new Date(),
+          },
+        });
+
+      console.log(`Synced guild: ${guild.name} (${guild.id})`);
+    }
+
+    console.log("Discord guild sync complete.");
+  } catch (error) {
+    console.error("Failed to sync Discord guilds:", error);
+  }
+});
+
+client.on(Events.GuildCreate, async (guild) => {
+  try {
+    await db
+      .insert(guilds)
+      .values({
+        id: guild.id,
+        name: guild.name,
+      })
+      .onConflictDoUpdate({
+        target: guilds.id,
+        set: {
+          name: guild.name,
+          updatedAt: new Date(),
+        },
+      });
+
+    console.log(`Registered new guild: ${guild.name} (${guild.id})`);
+  } catch (error) {
+    console.error(`Failed to register guild ${guild.id}:`, error);
   }
 });
 

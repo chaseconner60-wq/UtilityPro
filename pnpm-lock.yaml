@@ -41,6 +41,9 @@ importers:
 
   apps/bot:
     dependencies:
+      '@utilityx/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       discord.js:
         specifier: ^14.24.2
         version: 14.27.0

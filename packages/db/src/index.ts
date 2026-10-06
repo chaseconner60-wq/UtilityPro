@@ -10,3 +10,5 @@ if (!connectionString) {
 const client = postgres(connectionString);
 
 export const db = drizzle(client);
+
+export { guilds } from "./schema.js";
