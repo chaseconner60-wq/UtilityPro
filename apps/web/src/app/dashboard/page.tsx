@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { decryptSession } from "@/lib/session";
+import GuildList from "./GuildList";
 
 export default async function Dashboard() {
   const cookieStore = await cookies();
@@ -63,6 +64,8 @@ export default async function Dashboard() {
             </p>
           </div>
         </div>
+
+        <GuildList />
       </section>
     </main>
   );
