@@ -1,11 +1,16 @@
-import { SignJWT } from "jose";
 import { NextRequest, NextResponse } from "next/server";
+import { createSession } from "@/lib/session";
 
 type DiscordUser = {
   id: string;
   username: string;
   global_name: string | null;
   avatar: string | null;
+};
+
+type DiscordTokenResponse = {
+  access_token: string;
+  expires_in: number;
 };
 
 export async function GET(request: NextRequest) {
@@ -16,7 +21,6 @@ export async function GET(request: NextRequest) {
   const clientId = process.env.DISCORD_CLIENT_ID;
   const clientSecret = process.env.DISCORD_CLIENT_SECRET;
   const redirectUri = process.env.DISCORD_REDIRECT_URI;
-  const sessionSecret = process.env.SESSION_SECRET;
 
   if (!code) {
     return NextResponse.json(
@@ -32,7 +36,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (!clientId || !clientSecret || !redirectUri || !sessionSecret) {
+  if (!clientId || !clientSecret || !redirectUri) {
     return NextResponse.json(
       { error: "Discord OAuth is not configured." },
       { status: 500 }
@@ -68,9 +72,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const tokenData = (await tokenResponse.json()) as {
-      access_token: string;
-    };
+    const tokenData =
+      (await tokenResponse.json()) as DiscordTokenResponse;
 
     const userResponse = await fetch("https://discord.com/api/users/@me", {
       headers: {
@@ -88,18 +91,16 @@ export async function GET(request: NextRequest) {
 
     const user = (await userResponse.json()) as DiscordUser;
 
-    const secret = new TextEncoder().encode(sessionSecret);
-
-    const session = await new SignJWT({
-      discordId: user.id,
-      username: user.username,
-      globalName: user.global_name,
-      avatar: user.avatar,
-    })
-      .setProtectedHeader({ alg: "HS256" })
-      .setIssuedAt()
-      .setExpirationTime("7d")
-      .sign(secret);
+    const session = await createSession(
+      {
+        discordId: user.id,
+        username: user.username,
+        globalName: user.global_name,
+        avatar: user.avatar,
+        accessToken: tokenData.access_token,
+      },
+      tokenData.expires_in
+    );
 
     const response = NextResponse.redirect(
       new URL("/dashboard", redirectUri)
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: tokenData.expires_in,
     });
 
     response.cookies.delete("utilityx_oauth_state");

@@ -1,34 +1,19 @@
-import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-
-type Session = {
-  discordId: string;
-  username: string;
-  globalName?: string | null;
-  avatar?: string | null;
-};
+import { decryptSession } from "@/lib/session";
 
 export default async function Dashboard() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("utilityx_session");
-  const sessionSecret = process.env.SESSION_SECRET;
 
-  if (!sessionCookie || !sessionSecret) {
+  if (!sessionCookie) {
     redirect("/api/auth/discord");
   }
 
-  let session: Session;
+  let session;
 
   try {
-    const secret = new TextEncoder().encode(sessionSecret);
-
-    const { payload } = await jwtVerify(
-      sessionCookie.value,
-      secret
-    );
-
-    session = payload as unknown as Session;
+    session = await decryptSession(sessionCookie.value);
   } catch {
     redirect("/api/auth/discord");
   }
@@ -71,6 +56,7 @@ export default async function Dashboard() {
             <p>
               Username: <span className="text-white">{session.username}</span>
             </p>
+
             <p>
               Discord ID:{" "}
               <span className="text-white">{session.discordId}</span>
