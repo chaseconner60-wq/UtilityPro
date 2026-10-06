@@ -8,6 +8,7 @@ type Guild = {
   icon: string | null;
   owner: boolean;
   installed: boolean;
+  inviteUrl: string | null;
 };
 
 export default function GuildList() {
@@ -27,7 +28,6 @@ export default function GuildList() {
         }
 
         const data = await response.json();
-
         setGuilds(data.guilds ?? []);
       } catch {
         setError("Unable to load your Discord servers.");
@@ -57,19 +57,17 @@ export default function GuildList() {
 
   return (
     <section className="mt-10">
-      <div>
-        <p className="text-sm font-medium text-indigo-400">
-          Your Servers
-        </p>
+      <p className="text-sm font-medium text-indigo-400">
+        Your Servers
+      </p>
 
-        <h2 className="mt-1 text-2xl font-bold">
-          Select a server
-        </h2>
+      <h2 className="mt-1 text-2xl font-bold">
+        Select a server
+      </h2>
 
-        <p className="mt-2 text-sm text-zinc-400">
-          Servers where you have permission to manage UtilityX.
-        </p>
-      </div>
+      <p className="mt-2 text-sm text-zinc-400">
+        Manage servers running UtilityX or add the bot to another server.
+      </p>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {guilds.map((guild) => {
@@ -112,12 +110,12 @@ export default function GuildList() {
                   Manage
                 </a>
               ) : (
-                <button
-                  type="button"
+                <a
+                  href={guild.inviteUrl ?? "#"}
                   className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-300 transition hover:bg-white/10 hover:text-white"
                 >
                   Add UtilityX
-                </button>
+                </a>
               )}
             </div>
           );

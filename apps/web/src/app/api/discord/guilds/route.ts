@@ -17,20 +17,24 @@ type InstalledGuild = {
 const ADMINISTRATOR = BigInt("8");
 const MANAGE_GUILD = BigInt("32");
 
+// UtilityX permissions:
+// kick/ban, manage server, reactions, audit log,
+// manage channels, view/send/manage messages,
+// embeds, attachments, history, manage roles
+const BOT_PERMISSIONS = "268561654";
+
 export async function GET(request: NextRequest) {
   const sessionCookie = request.cookies.get("utilityx_session");
   const apiUrl = process.env.UTILITYX_API_URL;
+  const clientId = process.env.DISCORD_CLIENT_ID;
 
   if (!sessionCookie) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!apiUrl) {
+  if (!apiUrl || !clientId) {
     return NextResponse.json(
-      { error: "UtilityX API is not configured." },
+      { error: "UtilityX is not configured." },
       { status: 500 }
     );
   }
@@ -52,11 +56,6 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!discordResponse.ok) {
-      console.error(
-        "Discord guild request failed:",
-        discordResponse.status
-      );
-
       return NextResponse.json(
         { error: "Unable to retrieve Discord servers." },
         { status: 502 }
@@ -64,11 +63,6 @@ export async function GET(request: NextRequest) {
     }
 
     if (!installedResponse.ok) {
-      console.error(
-        "Installed guild request failed:",
-        installedResponse.status
-      );
-
       return NextResponse.json(
         { error: "Unable to retrieve installed UtilityX servers." },
         { status: 502 }
@@ -95,13 +89,28 @@ export async function GET(request: NextRequest) {
           (permissions & MANAGE_GUILD) === MANAGE_GUILD
         );
       })
-      .map((guild) => ({
-        id: guild.id,
-        name: guild.name,
-        icon: guild.icon,
-        owner: guild.owner,
-        installed: installedIds.has(guild.id),
-      }))
+      .map((guild) => {
+        const installed = installedIds.has(guild.id);
+
+        const inviteParams = new URLSearchParams({
+          client_id: clientId,
+          permissions: BOT_PERMISSIONS,
+          scope: "bot applications.commands",
+          guild_id: guild.id,
+          disable_guild_select: "true",
+        });
+
+        return {
+          id: guild.id,
+          name: guild.name,
+          icon: guild.icon,
+          owner: guild.owner,
+          installed,
+          inviteUrl: installed
+            ? null
+            : `https://discord.com/oauth2/authorize?${inviteParams.toString()}`,
+        };
+      })
       .sort((a, b) => {
         if (a.installed !== b.installed) {
           return a.installed ? -1 : 1;
