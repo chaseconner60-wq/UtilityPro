@@ -18,8 +18,40 @@ type Guild = {
   name: string;
 };
 
+type GuildChannel = {
+  id: string;
+  guildId: string;
+  name: string;
+  type: number;
+  parentId: string | null;
+  position: number;
+};
+
+type GuildRole = {
+  id: string;
+  guildId: string;
+  name: string;
+  position: number;
+  managed: boolean;
+};
+
+type GuildResources = {
+  channels: GuildChannel[];
+  roles: GuildRole[];
+};
+
 type Settings = {
   guildId: string;
+
+  welcomeChannelId: string | null;
+  goodbyeChannelId: string | null;
+  loggingChannelId: string | null;
+
+  ticketCategoryId: string | null;
+  ticketAccessRoleId: string | null;
+
+  staffRoleId: string | null;
+  moderatorRoleId: string | null;
 
   welcomeEnabled: boolean;
   welcomeMessage: string;
@@ -39,12 +71,14 @@ export default function ServerDashboard({
   iconUrl,
   owner,
   initialSettings,
+  initialResources,
 }: {
   guildId: string;
   guildName: string;
   iconUrl: string | null;
   owner: boolean;
   initialSettings: Settings;
+  initialResources: GuildResources;
 }) {
   const [section, setSection] =
     useState<Section>("overview");
@@ -147,6 +181,39 @@ export default function ServerDashboard({
       detail: "Automatic actions",
     },
   ];
+
+  const textChannels =
+    initialResources.channels
+      .filter(
+        (channel) =>
+          channel.type === 0 ||
+          channel.type === 5
+      )
+      .sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+
+  const categories =
+    initialResources.channels
+      .filter(
+        (channel) =>
+          channel.type === 4
+      )
+      .sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+
+  const selectableRoles =
+    initialResources.roles
+      .filter(
+        (role) =>
+          !role.managed &&
+          role.id !== guildId
+      )
+      .sort(
+        (a, b) =>
+          b.position - a.position
+      );
 
   const modules = [
     {
@@ -417,6 +484,20 @@ export default function ServerDashboard({
                 title="Welcome & Goodbye"
                 description="Configure messages shown when members join or leave your community."
               >
+                <ResourceSelect
+                  title="Welcome Channel"
+                  description="Channel where UtilityX sends welcome messages."
+                  value={settings.welcomeChannelId}
+                  options={textChannels}
+                  placeholder="Select a welcome channel"
+                  prefix="#"
+                  onChange={(value) =>
+                    void save({
+                      welcomeChannelId: value,
+                    })
+                  }
+                />
+
                 <SettingToggle
                   title="Welcome Messages"
                   description="Enable UtilityX welcome messages."
@@ -445,6 +526,20 @@ export default function ServerDashboard({
                     void save({
                       welcomeMessage:
                         value,
+                    })
+                  }
+                />
+
+                <ResourceSelect
+                  title="Goodbye Channel"
+                  description="Channel where UtilityX sends goodbye messages."
+                  value={settings.goodbyeChannelId}
+                  options={textChannels}
+                  placeholder="Select a goodbye channel"
+                  prefix="#"
+                  onChange={(value) =>
+                    void save({
+                      goodbyeChannelId: value,
                     })
                   }
                 />
@@ -504,6 +599,34 @@ export default function ServerDashboard({
                 title="Tickets"
                 description="Prepare UtilityX's private support-ticket system."
               >
+                <ResourceSelect
+                  title="Ticket Category"
+                  description="Category where UtilityX creates ticket channels."
+                  value={settings.ticketCategoryId}
+                  options={categories}
+                  placeholder="Select a ticket category"
+                  prefix=""
+                  onChange={(value) =>
+                    void save({
+                      ticketCategoryId: value,
+                    })
+                  }
+                />
+
+                <ResourceSelect
+                  title="Ticket Access Role"
+                  description="Role allowed to view and manage tickets."
+                  value={settings.ticketAccessRoleId}
+                  options={selectableRoles}
+                  placeholder="Select ticket access role"
+                  prefix="@"
+                  onChange={(value) =>
+                    void save({
+                      ticketAccessRoleId: value,
+                    })
+                  }
+                />
+
                 <SettingToggle
                   title="Ticket System"
                   description="Allow this server to use UtilityX ticket features."
@@ -537,6 +660,20 @@ export default function ServerDashboard({
                 title="Logging"
                 description="Track important Discord and UtilityX activity."
               >
+                <ResourceSelect
+                  title="Logging Channel"
+                  description="Channel where UtilityX sends audit and moderation logs."
+                  value={settings.loggingChannelId}
+                  options={textChannels}
+                  placeholder="Select logging channel"
+                  prefix="#"
+                  onChange={(value) =>
+                    void save({
+                      loggingChannelId: value,
+                    })
+                  }
+                />
+
                 <SettingToggle
                   title="Server Logging"
                   description="Enable UtilityX event logging for this server."
@@ -569,6 +706,34 @@ export default function ServerDashboard({
                 title="Moderation"
                 description="Control UtilityX moderation features."
               >
+                <ResourceSelect
+                  title="Staff Role"
+                  description="Primary staff role used by UtilityX."
+                  value={settings.staffRoleId}
+                  options={selectableRoles}
+                  placeholder="Select staff role"
+                  prefix="@"
+                  onChange={(value) =>
+                    void save({
+                      staffRoleId: value,
+                    })
+                  }
+                />
+
+                <ResourceSelect
+                  title="Moderator Role"
+                  description="Role permitted to use moderation features."
+                  value={settings.moderatorRoleId}
+                  options={selectableRoles}
+                  placeholder="Select moderator role"
+                  prefix="@"
+                  onChange={(value) =>
+                    void save({
+                      moderatorRoleId: value,
+                    })
+                  }
+                />
+
                 <SettingToggle
                   title="Moderation Tools"
                   description="Allow moderation functionality in this server."
@@ -757,6 +922,63 @@ function MessageEditor({
           Save Message
         </button>
       </div>
+    </div>
+  );
+}
+
+function ResourceSelect({
+  title,
+  description,
+  value,
+  options,
+  placeholder,
+  prefix,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  value: string | null;
+  options: {
+    id: string;
+    name: string;
+  }[];
+  placeholder: string;
+  prefix: string;
+  onChange: (value: string | null) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+      <label className="font-semibold">
+        {title}
+      </label>
+
+      <p className="mt-1 text-sm text-zinc-500">
+        {description}
+      </p>
+
+      <select
+        value={value ?? ""}
+        onChange={(event) =>
+          onChange(
+            event.target.value || null
+          )
+        }
+        className="mt-4 w-full rounded-xl border border-white/10 bg-[#0d0e12] px-4 py-3 text-sm text-white outline-none focus:border-indigo-500"
+      >
+        <option value="">
+          {placeholder}
+        </option>
+
+        {options.map((option) => (
+          <option
+            key={option.id}
+            value={option.id}
+          >
+            {prefix}
+            {option.name}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

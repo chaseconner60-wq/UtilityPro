@@ -12,6 +12,8 @@ import {
   globalSettings,
   bannedGuilds,
   ownerActions,
+  guildChannels,
+  guildRoles,
 } from "@utilityx/db";
 
 import { eq } from "drizzle-orm";
@@ -38,6 +40,59 @@ const rest = new REST({ version: "10" }).setToken(token);
 
 let checkingMaintenance = false;
 let processingOwnerActions = false;
+
+async function syncGuildResources(guild: any) {
+  try {
+    const channels = await guild.channels.fetch();
+    const roles = await guild.roles.fetch();
+
+    await db
+      .delete(guildChannels)
+      .where(eq(guildChannels.guildId, guild.id));
+
+    await db
+      .delete(guildRoles)
+      .where(eq(guildRoles.guildId, guild.id));
+
+    const channelValues = [...channels.values()]
+      .filter((channel) => channel)
+      .map((channel) => ({
+        id: channel!.id,
+        guildId: guild.id,
+        name: channel!.name,
+        type: channel!.type,
+        parentId: channel!.parentId ?? null,
+        position: channel!.position ?? 0,
+      }));
+
+    if (channelValues.length) {
+      await db.insert(guildChannels).values(channelValues);
+    }
+
+    const roleValues = [...roles.values()]
+      .filter((role) => role)
+      .map((role) => ({
+        id: role!.id,
+        guildId: guild.id,
+        name: role!.name,
+        position: role!.position ?? 0,
+        managed: role!.managed ?? false,
+      }));
+
+    if (roleValues.length) {
+      await db.insert(guildRoles).values(roleValues);
+    }
+
+    console.log(
+      `Synced ${channelValues.length} channels and ${roleValues.length} roles for ${guild.name}.`
+    );
+  } catch (error) {
+    console.error(
+      `Failed to sync resources for ${guild.name}:`,
+      error
+    );
+  }
+}
 
 async function isGuildBanned(guildId: string) {
   const [ban] = await db
@@ -331,6 +386,8 @@ client.once(Events.ClientReady, async (readyClient) => {
       console.log(
         `Synced guild: ${guild.name} (${guild.id})`
       );
+
+      await syncGuildResources(guild);
     } catch (error) {
       console.error(
         `Failed to sync guild ${guild.id}:`,
@@ -349,6 +406,12 @@ client.once(Events.ClientReady, async (readyClient) => {
   setInterval(() => {
     void processOwnerActions();
   }, 10_000);
+
+  setInterval(() => {
+    for (const guild of client.guilds.cache.values()) {
+      void syncGuildResources(guild);
+    }
+  }, 300_000);
 });
 
 client.on(Events.GuildCreate, async (guild) => {
@@ -379,6 +442,8 @@ client.on(Events.GuildCreate, async (guild) => {
     console.log(
       `Registered new guild: ${guild.name} (${guild.id})`
     );
+
+    await syncGuildResources(guild);
   } catch (error) {
     console.error(
       `Failed to register guild ${guild.id}:`,
@@ -390,6 +455,14 @@ client.on(Events.GuildCreate, async (guild) => {
 client.on(Events.GuildDelete, async (guild) => {
   try {
     await removeGuildRecord(guild.id);
+
+    await db
+      .delete(guildChannels)
+      .where(eq(guildChannels.guildId, guild.id));
+
+    await db
+      .delete(guildRoles)
+      .where(eq(guildRoles.guildId, guild.id));
 
     console.log(
       `Removed disconnected guild: ${guild.name} (${guild.id})`

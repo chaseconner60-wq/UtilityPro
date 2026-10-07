@@ -1,5 +1,6 @@
 import {
   boolean,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -88,6 +89,16 @@ export const ownerActions = pgTable("owner_actions", {
 export const guildSettings = pgTable("guild_settings", {
   guildId: text("guild_id").primaryKey(),
 
+  welcomeChannelId: text("welcome_channel_id"),
+  goodbyeChannelId: text("goodbye_channel_id"),
+  loggingChannelId: text("logging_channel_id"),
+
+  ticketCategoryId: text("ticket_category_id"),
+  ticketAccessRoleId: text("ticket_access_role_id"),
+
+  staffRoleId: text("staff_role_id"),
+  moderatorRoleId: text("moderator_role_id"),
+
   welcomeEnabled: boolean("welcome_enabled")
     .notNull()
     .default(false),
@@ -123,4 +134,37 @@ export const guildSettings = pgTable("guild_settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+});
+
+
+export const guildChannels = pgTable("guild_channels", {
+  id: text("id").primaryKey(),
+
+  guildId: text("guild_id").notNull(),
+
+  name: text("name").notNull(),
+
+  type: integer("type").notNull(),
+
+  parentId: text("parent_id"),
+
+  position: integer("position")
+    .notNull()
+    .default(0),
+});
+
+export const guildRoles = pgTable("guild_roles", {
+  id: text("id").primaryKey(),
+
+  guildId: text("guild_id").notNull(),
+
+  name: text("name").notNull(),
+
+  position: integer("position")
+    .notNull()
+    .default(0),
+
+  managed: boolean("managed")
+    .notNull()
+    .default(false),
 });

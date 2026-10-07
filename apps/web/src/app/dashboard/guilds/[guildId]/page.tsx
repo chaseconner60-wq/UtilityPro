@@ -150,15 +150,28 @@ export default async function GuildPage({
     );
   }
 
-  const settingsResponse = await fetch(
-    `${apiUrl}/internal/guild-settings/${guildId}`,
-    {
-      headers: {
-        "x-utilityx-internal-secret": internalSecret,
-      },
-      cache: "no-store",
-    }
-  );
+  const [settingsResponse, resourcesResponse] =
+    await Promise.all([
+      fetch(
+        `${apiUrl}/internal/guild-settings/${guildId}`,
+        {
+          headers: {
+            "x-utilityx-internal-secret": internalSecret,
+          },
+          cache: "no-store",
+        }
+      ),
+
+      fetch(
+        `${apiUrl}/internal/guild-resources/${guildId}`,
+        {
+          headers: {
+            "x-utilityx-internal-secret": internalSecret,
+          },
+          cache: "no-store",
+        }
+      ),
+    ]);
 
   if (!settingsResponse.ok) {
     throw new Error(
@@ -166,7 +179,17 @@ export default async function GuildPage({
     );
   }
 
-  const settingsData = await settingsResponse.json();
+  if (!resourcesResponse.ok) {
+    throw new Error(
+      "Unable to load Discord server resources."
+    );
+  }
+
+  const settingsData =
+    await settingsResponse.json();
+
+  const resourcesData =
+    await resourcesResponse.json();
 
   const iconUrl =
     guild.icon
@@ -182,6 +205,7 @@ export default async function GuildPage({
       iconUrl={iconUrl}
       owner={guild.owner}
       initialSettings={settingsData.settings}
+      initialResources={resourcesData}
     />
   );
 }

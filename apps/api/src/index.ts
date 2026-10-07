@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import {
   db,
   guilds,
@@ -9,6 +9,8 @@ import {
   bannedGuilds,
   ownerActions,
   guildSettings,
+  guildChannels,
+  guildRoles,
 } from "@utilityx/db";
 
 const app = Fastify({
@@ -461,6 +463,16 @@ app.patch<{
     loggingEnabled?: boolean;
     moderationEnabled?: boolean;
     automationEnabled?: boolean;
+
+    welcomeChannelId?: string | null;
+    goodbyeChannelId?: string | null;
+    loggingChannelId?: string | null;
+
+    ticketCategoryId?: string | null;
+    ticketAccessRoleId?: string | null;
+
+    staffRoleId?: string | null;
+    moderatorRoleId?: string | null;
   };
 }>(
   "/internal/guild-settings/:guildId",
@@ -534,6 +546,41 @@ app.patch<{
           body.automationEnabled ??
           current.automationEnabled,
 
+        welcomeChannelId:
+          body.welcomeChannelId !== undefined
+            ? body.welcomeChannelId
+            : current.welcomeChannelId,
+
+        goodbyeChannelId:
+          body.goodbyeChannelId !== undefined
+            ? body.goodbyeChannelId
+            : current.goodbyeChannelId,
+
+        loggingChannelId:
+          body.loggingChannelId !== undefined
+            ? body.loggingChannelId
+            : current.loggingChannelId,
+
+        ticketCategoryId:
+          body.ticketCategoryId !== undefined
+            ? body.ticketCategoryId
+            : current.ticketCategoryId,
+
+        ticketAccessRoleId:
+          body.ticketAccessRoleId !== undefined
+            ? body.ticketAccessRoleId
+            : current.ticketAccessRoleId,
+
+        staffRoleId:
+          body.staffRoleId !== undefined
+            ? body.staffRoleId
+            : current.staffRoleId,
+
+        moderatorRoleId:
+          body.moderatorRoleId !== undefined
+            ? body.moderatorRoleId
+            : current.moderatorRoleId,
+
         updatedAt: new Date(),
       })
       .where(eq(guildSettings.guildId, guildId))
@@ -541,6 +588,48 @@ app.patch<{
 
     return {
       settings,
+    };
+  }
+);
+
+
+app.get<{
+  Params: { guildId: string };
+}>(
+  "/internal/guild-resources/:guildId",
+  async (request, reply) => {
+    const header =
+      request.headers["x-utilityx-internal-secret"];
+
+    if (
+      !internalAuthorized(
+        typeof header === "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply.code(401).send({
+        error: "Unauthorized",
+      });
+    }
+
+    const { guildId } = request.params;
+
+    const [channels, roles] = await Promise.all([
+      db
+        .select()
+        .from(guildChannels)
+        .where(eq(guildChannels.guildId, guildId)),
+
+      db
+        .select()
+        .from(guildRoles)
+        .where(eq(guildRoles.guildId, guildId)),
+    ]);
+
+    return {
+      channels,
+      roles,
     };
   }
 );
