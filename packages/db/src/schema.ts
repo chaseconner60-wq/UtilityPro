@@ -128,6 +128,30 @@ export const guildSettings = pgTable("guild_settings", {
   ticketCategoryId: text("ticket_category_id"),
   ticketAccessRoleId: text("ticket_access_role_id"),
 
+  ticketPanelChannelId: text("ticket_panel_channel_id"),
+  ticketLogChannelId: text("ticket_log_channel_id"),
+  ticketPanelMessageId: text("ticket_panel_message_id"),
+
+  ticketPanelTitle: text("ticket_panel_title")
+    .notNull()
+    .default("Support Tickets"),
+
+  ticketPanelMessage: text("ticket_panel_message")
+    .notNull()
+    .default("Need help? Click the button below to create a private support ticket."),
+
+  ticketChannelName: text("ticket_channel_name")
+    .notNull()
+    .default("ticket-{username}"),
+
+  ticketOnePerUser: boolean("ticket_one_per_user")
+    .notNull()
+    .default(true),
+
+  ticketTranscriptsEnabled: boolean("ticket_transcripts_enabled")
+    .notNull()
+    .default(true),
+
   staffRoleId: text("staff_role_id"),
   moderatorRoleId: text("moderator_role_id"),
 
@@ -199,4 +223,51 @@ export const guildRoles = pgTable("guild_roles", {
   managed: boolean("managed")
     .notNull()
     .default(false),
+});
+
+
+export const tickets = pgTable("tickets", {
+  id: text("id").primaryKey(),
+
+  guildId: text("guild_id").notNull(),
+
+  channelId: text("channel_id").notNull(),
+
+  userId: text("user_id").notNull(),
+
+  claimedBy: text("claimed_by"),
+
+  status: text("status")
+    .notNull()
+    .default("open"),
+
+  closeReason: text("close_reason"),
+
+  transcript: text("transcript"),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+
+  closedAt: timestamp("closed_at", { withTimezone: true }),
+});
+
+export const guildActions = pgTable("guild_actions", {
+  id: text("id").primaryKey(),
+
+  guildId: text("guild_id").notNull(),
+
+  type: text("type").notNull(),
+
+  status: text("status")
+    .notNull()
+    .default("pending"),
+
+  result: text("result"),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+
+  completedAt: timestamp("completed_at", { withTimezone: true }),
 });

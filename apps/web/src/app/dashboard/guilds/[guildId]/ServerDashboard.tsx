@@ -50,6 +50,17 @@ type Settings = {
   ticketCategoryId: string | null;
   ticketAccessRoleId: string | null;
 
+  ticketPanelChannelId: string | null;
+  ticketLogChannelId: string | null;
+  ticketPanelMessageId: string | null;
+
+  ticketPanelTitle: string;
+  ticketPanelMessage: string;
+  ticketChannelName: string;
+
+  ticketOnePerUser: boolean;
+  ticketTranscriptsEnabled: boolean;
+
   staffRoleId: string | null;
   moderatorRoleId: string | null;
 
@@ -146,6 +157,41 @@ export default function ServerDashboard({
         error instanceof Error
           ? error.message
           : "Unable to save."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function postTicketPanel() {
+    setSaving(true);
+    setStatus("");
+
+    try {
+      const response = await fetch(
+        `/api/guilds/${guildId}/tickets`,
+        {
+          method: "POST",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            "Unable to post ticket panel."
+        );
+      }
+
+      setStatus(
+        "Ticket panel queued. UtilityX will post it shortly."
+      );
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Unable to post ticket panel."
       );
     } finally {
       setSaving(false);
@@ -678,14 +724,39 @@ export default function ServerDashboard({
               <ModulePage
                 eyebrow="Support"
                 title="Tickets"
-                description="Prepare UtilityX's private support-ticket system."
+                description="Configure UtilityX's complete private support-ticket system."
               >
+                <SettingToggle
+                  title="Ticket System"
+                  description="Enable ticket creation and ticket-management features."
+                  enabled={settings.ticketsEnabled}
+                  onChange={(enabled) =>
+                    void save({
+                      ticketsEnabled: enabled,
+                    })
+                  }
+                />
+
+                <ResourceSelect
+                  title="Ticket Panel Channel"
+                  description="Channel where UtilityX posts the Create Ticket panel."
+                  value={settings.ticketPanelChannelId}
+                  options={textChannels}
+                  placeholder="Select panel channel"
+                  prefix="#"
+                  onChange={(value) =>
+                    void save({
+                      ticketPanelChannelId: value,
+                    })
+                  }
+                />
+
                 <ResourceSelect
                   title="Ticket Category"
-                  description="Category where UtilityX creates ticket channels."
+                  description="Category where private ticket channels are created."
                   value={settings.ticketCategoryId}
                   options={categories}
-                  placeholder="Select a ticket category"
+                  placeholder="Select ticket category"
                   prefix=""
                   onChange={(value) =>
                     void save({
@@ -696,7 +767,7 @@ export default function ServerDashboard({
 
                 <ResourceSelect
                   title="Ticket Access Role"
-                  description="Role allowed to view and manage tickets."
+                  description="Staff role allowed to view, claim and close tickets."
                   value={settings.ticketAccessRoleId}
                   options={selectableRoles}
                   placeholder="Select ticket access role"
@@ -708,29 +779,108 @@ export default function ServerDashboard({
                   }
                 />
 
-                <SettingToggle
-                  title="Ticket System"
-                  description="Allow this server to use UtilityX ticket features."
-                  enabled={
-                    settings.ticketsEnabled
-                  }
-                  onChange={(
-                    enabled
-                  ) =>
+                <ResourceSelect
+                  title="Ticket Log Channel"
+                  description="Closed-ticket transcripts and ticket events are sent here."
+                  value={settings.ticketLogChannelId}
+                  options={textChannels}
+                  placeholder="Select ticket log channel"
+                  prefix="#"
+                  onChange={(value) =>
                     void save({
-                      ticketsEnabled:
+                      ticketLogChannelId: value,
+                    })
+                  }
+                />
+
+                <MessageEditor
+                  title="Ticket Panel Title"
+                  value={settings.ticketPanelTitle}
+                  disabled={!settings.ticketsEnabled}
+                  onSave={(value) =>
+                    void save({
+                      ticketPanelTitle: value,
+                    })
+                  }
+                />
+
+                <MessageEditor
+                  title="Ticket Panel Message"
+                  value={settings.ticketPanelMessage}
+                  disabled={!settings.ticketsEnabled}
+                  onSave={(value) =>
+                    void save({
+                      ticketPanelMessage: value,
+                    })
+                  }
+                />
+
+                <MessageEditor
+                  title="Ticket Channel Name"
+                  value={settings.ticketChannelName}
+                  disabled={!settings.ticketsEnabled}
+                  onSave={(value) =>
+                    void save({
+                      ticketChannelName: value,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="One Open Ticket Per User"
+                  description="Prevent members from opening multiple tickets at the same time."
+                  enabled={settings.ticketOnePerUser}
+                  onChange={(enabled) =>
+                    void save({
+                      ticketOnePerUser: enabled,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Ticket Transcripts"
+                  description="Save a transcript when a ticket is closed and send it to the ticket log channel."
+                  enabled={settings.ticketTranscriptsEnabled}
+                  onChange={(enabled) =>
+                    void save({
+                      ticketTranscriptsEnabled:
                         enabled,
                     })
                   }
                 />
 
-                <ComingNext>
-                  Channel, category,
-                  staff-role and ticket-panel
-                  configuration comes in
-                  the next resource-selector
-                  pass.
-                </ComingNext>
+                <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-6">
+                  <h3 className="font-semibold">
+                    Ticket Panel
+                  </h3>
+
+                  <p className="mt-2 text-sm text-zinc-400">
+                    After configuring the options above, publish or refresh the ticket panel in Discord.
+                  </p>
+
+                  <button
+                    type="button"
+                    disabled={
+                      saving ||
+                      !settings.ticketsEnabled ||
+                      !settings.ticketPanelChannelId ||
+                      !settings.ticketCategoryId
+                    }
+                    onClick={() =>
+                      void postTicketPanel()
+                    }
+                    className="mt-5 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-semibold transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Post / Update Ticket Panel
+                  </button>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4 text-sm text-zinc-400">
+                  Channel-name variables:{" "}
+                  <code>{"{username}"}</code>
+                  {" "}and{" "}
+                  <code>{"{id}"}</code>.
+                </div>
               </ModulePage>
             )}
 

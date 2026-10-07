@@ -11,6 +11,8 @@ import {
   guildSettings,
   guildChannels,
   guildRoles,
+  tickets,
+  guildActions,
 } from "@utilityx/db";
 
 const app = Fastify({
@@ -471,6 +473,16 @@ app.patch<{
     ticketCategoryId?: string | null;
     ticketAccessRoleId?: string | null;
 
+    ticketPanelChannelId?: string | null;
+    ticketLogChannelId?: string | null;
+
+    ticketPanelTitle?: string;
+    ticketPanelMessage?: string;
+    ticketChannelName?: string;
+
+    ticketOnePerUser?: boolean;
+    ticketTranscriptsEnabled?: boolean;
+
     staffRoleId?: string | null;
     moderatorRoleId?: string | null;
 
@@ -601,6 +613,36 @@ app.patch<{
             ? body.ticketAccessRoleId
             : current.ticketAccessRoleId,
 
+        ticketPanelChannelId:
+          body.ticketPanelChannelId !== undefined
+            ? body.ticketPanelChannelId
+            : current.ticketPanelChannelId,
+
+        ticketLogChannelId:
+          body.ticketLogChannelId !== undefined
+            ? body.ticketLogChannelId
+            : current.ticketLogChannelId,
+
+        ticketPanelTitle:
+          body.ticketPanelTitle?.trim() ||
+          current.ticketPanelTitle,
+
+        ticketPanelMessage:
+          body.ticketPanelMessage?.trim() ||
+          current.ticketPanelMessage,
+
+        ticketChannelName:
+          body.ticketChannelName?.trim() ||
+          current.ticketChannelName,
+
+        ticketOnePerUser:
+          body.ticketOnePerUser ??
+          current.ticketOnePerUser,
+
+        ticketTranscriptsEnabled:
+          body.ticketTranscriptsEnabled ??
+          current.ticketTranscriptsEnabled,
+
         staffRoleId:
           body.staffRoleId !== undefined
             ? body.staffRoleId
@@ -692,6 +734,93 @@ app.get<{
     return {
       channels,
       roles,
+    };
+  }
+);
+
+
+app.get<{
+  Params: { guildId: string };
+}>(
+  "/internal/tickets/:guildId",
+  async (request, reply) => {
+    const header =
+      request.headers["x-utilityx-internal-secret"];
+
+    if (
+      !internalAuthorized(
+        typeof header === "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply.code(401).send({
+        error: "Unauthorized",
+      });
+    }
+
+    const rows = await db
+      .select()
+      .from(tickets)
+      .where(eq(tickets.guildId, request.params.guildId));
+
+    return {
+      tickets: rows,
+    };
+  }
+);
+
+app.post<{
+  Params: { guildId: string };
+}>(
+  "/internal/ticket-panel/:guildId",
+  async (request, reply) => {
+    const header =
+      request.headers["x-utilityx-internal-secret"];
+
+    if (
+      !internalAuthorized(
+        typeof header === "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply.code(401).send({
+        error: "Unauthorized",
+      });
+    }
+
+    const { guildId } = request.params;
+
+    const [settings] = await db
+      .select()
+      .from(guildSettings)
+      .where(eq(guildSettings.guildId, guildId))
+      .limit(1);
+
+    if (!settings?.ticketsEnabled) {
+      return reply.code(400).send({
+        error: "Ticket system must be enabled first.",
+      });
+    }
+
+    if (!settings.ticketPanelChannelId) {
+      return reply.code(400).send({
+        error: "Select a ticket panel channel first.",
+      });
+    }
+
+    const actionId = crypto.randomUUID();
+
+    await db.insert(guildActions).values({
+      id: actionId,
+      guildId,
+      type: "post_ticket_panel",
+    });
+
+    return {
+      success: true,
+      actionId,
     };
   }
 );

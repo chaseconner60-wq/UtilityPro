@@ -6,6 +6,15 @@ import {
   Routes,
   EmbedBuilder,
   Partials,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType,
+  PermissionFlagsBits,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  AttachmentBuilder,
 } from "discord.js";
 
 import {
@@ -17,9 +26,11 @@ import {
   guildChannels,
   guildRoles,
   guildSettings,
+  tickets,
+  guildActions,
 } from "@utilityx/db";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import {
   data as pingData,
@@ -193,6 +204,707 @@ async function sendLog(
       error
     );
   }
+}
+
+function safeTicketName(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 90);
+}
+
+async function postTicketPanel(guildId: string) {
+  const guild =
+    client.guilds.cache.get(guildId);
+
+  if (!guild) {
+    throw new Error("Guild is not connected.");
+  }
+
+  const settings =
+    await getGuildSettings(guildId);
+
+  if (
+    !settings?.ticketsEnabled ||
+    !settings.ticketPanelChannelId
+  ) {
+    throw new Error(
+      "Ticket configuration is incomplete."
+    );
+  }
+
+  const channel =
+    await guild.channels.fetch(
+      settings.ticketPanelChannelId
+    );
+
+  if (!channel?.isTextBased()) {
+    throw new Error(
+      "Ticket panel channel is invalid."
+    );
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle(settings.ticketPanelTitle)
+    .setDescription(
+      settings.ticketPanelMessage
+    )
+    .setFooter({
+      text: "Powered by UtilityX",
+    });
+
+  const row =
+    new ActionRowBuilder<ButtonBuilder>()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId(
+            "utilityx_ticket_create"
+          )
+          .setLabel("Create Ticket")
+          .setStyle(
+            ButtonStyle.Primary
+          )
+          .setEmoji("🎫")
+      );
+
+  let message = null;
+
+  if (settings.ticketPanelMessageId) {
+    try {
+      message =
+        await channel.messages.fetch(
+          settings.ticketPanelMessageId
+        );
+
+      await message.edit({
+        embeds: [embed],
+        components: [row],
+      });
+    } catch {
+      message = null;
+    }
+  }
+
+  if (!message) {
+    message = await channel.send({
+      embeds: [embed],
+      components: [row],
+    });
+
+    await db
+      .update(guildSettings)
+      .set({
+        ticketPanelMessageId:
+          message.id,
+        updatedAt: new Date(),
+      })
+      .where(
+        eq(
+          guildSettings.guildId,
+          guildId
+        )
+      );
+  }
+
+  return message.id;
+}
+
+async function processGuildActions() {
+  const actions = await db
+    .select()
+    .from(guildActions)
+    .where(
+      eq(
+        guildActions.status,
+        "pending"
+      )
+    )
+    .limit(20);
+
+  for (const action of actions) {
+    try {
+      if (
+        action.type ===
+        "post_ticket_panel"
+      ) {
+        const messageId =
+          await postTicketPanel(
+            action.guildId
+          );
+
+        await db
+          .update(guildActions)
+          .set({
+            status: "completed",
+            result:
+              `Ticket panel posted: ${messageId}`,
+            completedAt:
+              new Date(),
+          })
+          .where(
+            eq(
+              guildActions.id,
+              action.id
+            )
+          );
+
+        continue;
+      }
+
+      await db
+        .update(guildActions)
+        .set({
+          status: "failed",
+          result:
+            "Unknown guild action.",
+          completedAt: new Date(),
+        })
+        .where(
+          eq(
+            guildActions.id,
+            action.id
+          )
+        );
+    } catch (error) {
+      await db
+        .update(guildActions)
+        .set({
+          status: "failed",
+          result:
+            error instanceof Error
+              ? error.message
+              : "Unknown error",
+          completedAt: new Date(),
+        })
+        .where(
+          eq(
+            guildActions.id,
+            action.id
+          )
+        );
+    }
+  }
+}
+
+async function createTicket(
+  interaction: any
+) {
+  const guild = interaction.guild;
+
+  if (!guild) return;
+
+  const settings =
+    await getGuildSettings(guild.id);
+
+  if (
+    !settings?.ticketsEnabled ||
+    !settings.ticketCategoryId
+  ) {
+    await interaction.reply({
+      content:
+        "The ticket system is not currently available.",
+      ephemeral: true,
+    });
+
+    return;
+  }
+
+  if (settings.ticketOnePerUser) {
+    const existing =
+      await db
+        .select()
+        .from(tickets)
+        .where(
+          and(
+            eq(
+              tickets.guildId,
+              guild.id
+            ),
+            eq(
+              tickets.userId,
+              interaction.user.id
+            ),
+            eq(
+              tickets.status,
+              "open"
+            )
+          )
+        )
+        .limit(1);
+
+    if (existing.length) {
+      await interaction.reply({
+        content:
+          `You already have an open ticket: <#${existing[0].channelId}>`,
+        ephemeral: true,
+      });
+
+      return;
+    }
+  }
+
+  await interaction.deferReply({
+    ephemeral: true,
+  });
+
+  const template =
+    settings.ticketChannelName ||
+    "ticket-{username}";
+
+  const channelName =
+    safeTicketName(
+      template
+        .replaceAll(
+          "{username}",
+          interaction.user.username
+        )
+        .replaceAll(
+          "{id}",
+          interaction.user.id
+        )
+    ) ||
+    `ticket-${interaction.user.id}`;
+
+  const overwrites: any[] = [
+    {
+      id: guild.roles.everyone.id,
+      deny: [
+        PermissionFlagsBits.ViewChannel,
+      ],
+    },
+    {
+      id: interaction.user.id,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.AttachFiles,
+        PermissionFlagsBits.EmbedLinks,
+      ],
+    },
+    {
+      id: client.user!.id,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ManageChannels,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.AttachFiles,
+      ],
+    },
+  ];
+
+  const staffRoleIds = [
+    settings.ticketAccessRoleId,
+    settings.staffRoleId,
+  ].filter(
+    (value, index, array) =>
+      value &&
+      array.indexOf(value) === index
+  );
+
+  for (const roleId of staffRoleIds) {
+    overwrites.push({
+      id: roleId!,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.ManageMessages,
+      ],
+    });
+  }
+
+  const channel =
+    await guild.channels.create({
+      name: channelName,
+      type:
+        ChannelType.GuildText,
+      parent:
+        settings.ticketCategoryId,
+      permissionOverwrites:
+        overwrites,
+      topic:
+        `UtilityX ticket for ${interaction.user.tag} (${interaction.user.id})`,
+    });
+
+  const ticketId =
+    crypto.randomUUID();
+
+  await db.insert(tickets).values({
+    id: ticketId,
+    guildId: guild.id,
+    channelId: channel.id,
+    userId:
+      interaction.user.id,
+  });
+
+  const embed = new EmbedBuilder()
+    .setTitle("Support Ticket")
+    .setDescription(
+      `Welcome <@${interaction.user.id}>.\n\nPlease explain what you need help with and a staff member will assist you.`
+    )
+    .addFields({
+      name: "Ticket ID",
+      value: ticketId,
+    })
+    .setTimestamp();
+
+  const row =
+    new ActionRowBuilder<ButtonBuilder>()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId(
+            "utilityx_ticket_claim"
+          )
+          .setLabel("Claim")
+          .setStyle(
+            ButtonStyle.Secondary
+          )
+          .setEmoji("🙋"),
+
+        new ButtonBuilder()
+          .setCustomId(
+            "utilityx_ticket_close"
+          )
+          .setLabel("Close Ticket")
+          .setStyle(
+            ButtonStyle.Danger
+          )
+          .setEmoji("🔒")
+      );
+
+  await channel.send({
+    content:
+      `<@${interaction.user.id}>`,
+    embeds: [embed],
+    components: [row],
+  });
+
+  await interaction.editReply({
+    content:
+      `Your ticket has been created: <#${channel.id}>`,
+  });
+}
+
+async function getTicketByChannel(
+  channelId: string
+) {
+  const [ticket] = await db
+    .select()
+    .from(tickets)
+    .where(
+      and(
+        eq(
+          tickets.channelId,
+          channelId
+        ),
+        eq(
+          tickets.status,
+          "open"
+        )
+      )
+    )
+    .limit(1);
+
+  return ticket ?? null;
+}
+
+async function canManageTicket(
+  interaction: any,
+  settings: any
+) {
+  if (
+    interaction.memberPermissions?.has(
+      PermissionFlagsBits.ManageGuild
+    )
+  ) {
+    return true;
+  }
+
+  const member =
+    interaction.member;
+
+  if (!member?.roles) {
+    return false;
+  }
+
+  const roles =
+    member.roles.cache;
+
+  return Boolean(
+    (settings.ticketAccessRoleId &&
+      roles.has(
+        settings.ticketAccessRoleId
+      )) ||
+      (settings.staffRoleId &&
+        roles.has(
+          settings.staffRoleId
+        ))
+  );
+}
+
+async function claimTicket(
+  interaction: any
+) {
+  const ticket =
+    await getTicketByChannel(
+      interaction.channelId
+    );
+
+  if (!ticket) {
+    await interaction.reply({
+      content:
+        "This is not an active UtilityX ticket.",
+      ephemeral: true,
+    });
+
+    return;
+  }
+
+  const settings =
+    await getGuildSettings(
+      interaction.guildId
+    );
+
+  if (
+    !(await canManageTicket(
+      interaction,
+      settings
+    ))
+  ) {
+    await interaction.reply({
+      content:
+        "You do not have permission to claim this ticket.",
+      ephemeral: true,
+    });
+
+    return;
+  }
+
+  if (ticket.claimedBy) {
+    await interaction.reply({
+      content:
+        `This ticket is already claimed by <@${ticket.claimedBy}>.`,
+      ephemeral: true,
+    });
+
+    return;
+  }
+
+  await db
+    .update(tickets)
+    .set({
+      claimedBy:
+        interaction.user.id,
+    })
+    .where(
+      eq(
+        tickets.id,
+        ticket.id
+      )
+    );
+
+  await interaction.reply({
+    content:
+      `🙋 Ticket claimed by <@${interaction.user.id}>.`,
+  });
+}
+
+async function buildTranscript(
+  channel: any
+) {
+  const messages =
+    await channel.messages.fetch({
+      limit: 100,
+    });
+
+  return [...messages.values()]
+    .reverse()
+    .map((message: any) => {
+      const timestamp =
+        message.createdAt.toISOString();
+
+      const author =
+        message.author?.tag ||
+        "Unknown User";
+
+      const content =
+        message.content ||
+        (message.embeds.length
+          ? "[Embed]"
+          : "[No text content]");
+
+      return `[${timestamp}] ${author}: ${content}`;
+    })
+    .join("\n");
+}
+
+async function closeTicket(
+  interaction: any,
+  reason: string
+) {
+  const ticket =
+    await getTicketByChannel(
+      interaction.channelId
+    );
+
+  if (!ticket) {
+    await interaction.reply({
+      content:
+        "This ticket is no longer active.",
+      ephemeral: true,
+    });
+
+    return;
+  }
+
+  const settings =
+    await getGuildSettings(
+      interaction.guildId
+    );
+
+  const manager =
+    await canManageTicket(
+      interaction,
+      settings
+    );
+
+  const creator =
+    ticket.userId ===
+    interaction.user.id;
+
+  if (!manager && !creator) {
+    await interaction.reply({
+      content:
+        "You cannot close this ticket.",
+      ephemeral: true,
+    });
+
+    return;
+  }
+
+  await interaction.deferReply({
+    ephemeral: true,
+  });
+
+  let transcript: string | null =
+    null;
+
+  if (
+    settings?.ticketTranscriptsEnabled
+  ) {
+    try {
+      transcript =
+        await buildTranscript(
+          interaction.channel
+        );
+    } catch (error) {
+      console.error(
+        "Ticket transcript failed:",
+        error
+      );
+    }
+  }
+
+  await db
+    .update(tickets)
+    .set({
+      status: "closed",
+      closeReason:
+        reason || null,
+      transcript,
+      closedAt: new Date(),
+    })
+    .where(
+      eq(
+        tickets.id,
+        ticket.id
+      )
+    );
+
+  if (
+    settings?.ticketLogChannelId
+  ) {
+    try {
+      const logChannel =
+        await interaction.guild.channels.fetch(
+          settings.ticketLogChannelId
+        );
+
+      if (
+        logChannel?.isTextBased()
+      ) {
+        const embed =
+          new EmbedBuilder()
+            .setTitle(
+              "Ticket Closed"
+            )
+            .addFields(
+              {
+                name: "Ticket",
+                value:
+                  ticket.id,
+              },
+              {
+                name: "Opened By",
+                value:
+                  `<@${ticket.userId}>`,
+              },
+              {
+                name: "Closed By",
+                value:
+                  `<@${interaction.user.id}>`,
+              },
+              {
+                name: "Reason",
+                value:
+                  reason ||
+                  "No reason provided.",
+              }
+            )
+            .setTimestamp();
+
+        const files =
+          transcript
+            ? [
+                new AttachmentBuilder(
+                  Buffer.from(
+                    transcript,
+                    "utf8"
+                  ),
+                  {
+                    name:
+                      `ticket-${ticket.id}.txt`,
+                  }
+                ),
+              ]
+            : [];
+
+        await logChannel.send({
+          embeds: [embed],
+          files,
+        });
+      }
+    } catch (error) {
+      console.error(
+        "Ticket close log failed:",
+        error
+      );
+    }
+  }
+
+  await interaction.editReply({
+    content:
+      "Ticket closed. This channel will be deleted shortly.",
+  });
+
+  setTimeout(() => {
+    void interaction.channel
+      ?.delete()
+      .catch(() => {});
+  }, 3000);
 }
 
 async function isGuildBanned(guildId: string) {
@@ -507,6 +1219,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   setInterval(() => {
     void processOwnerActions();
   }, 10_000);
+
+  setInterval(() => {
+    void processGuildActions();
+  }, 5_000);
 
   setInterval(() => {
     for (const guild of client.guilds.cache.values()) {
@@ -884,37 +1600,138 @@ client.on(Events.MessageDelete, async (message) => {
 client.on(
   Events.InteractionCreate,
   async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
-
     try {
-      const [settings] = await db
+      const [global] = await db
         .select()
         .from(globalSettings)
-        .where(eq(globalSettings.id, "global"))
+        .where(
+          eq(
+            globalSettings.id,
+            "global"
+          )
+        )
         .limit(1);
 
       if (
-        settings?.maintenanceEnabled &&
+        global?.maintenanceEnabled &&
         interaction.user.id !== ownerId
       ) {
-        await interaction.reply({
-          content:
-            settings.maintenanceMessage ||
-            "UtilityX is currently undergoing maintenance.",
-          ephemeral: true,
-        });
+        if (
+          interaction.isRepliable()
+        ) {
+          await interaction.reply({
+            content:
+              global.maintenanceMessage ||
+              "UtilityX is currently undergoing maintenance.",
+            ephemeral: true,
+          });
+        }
 
         return;
       }
 
-      if (interaction.commandName === "ping") {
-        await executePing(interaction);
+      if (interaction.isButton()) {
+        if (
+          interaction.customId ===
+          "utilityx_ticket_create"
+        ) {
+          await createTicket(
+            interaction
+          );
+          return;
+        }
+
+        if (
+          interaction.customId ===
+          "utilityx_ticket_claim"
+        ) {
+          await claimTicket(
+            interaction
+          );
+          return;
+        }
+
+        if (
+          interaction.customId ===
+          "utilityx_ticket_close"
+        ) {
+          const modal =
+            new ModalBuilder()
+              .setCustomId(
+                "utilityx_ticket_close_modal"
+              )
+              .setTitle(
+                "Close Ticket"
+              );
+
+          const reason =
+            new TextInputBuilder()
+              .setCustomId(
+                "close_reason"
+              )
+              .setLabel(
+                "Close reason (optional)"
+              )
+              .setStyle(
+                TextInputStyle.Paragraph
+              )
+              .setRequired(false)
+              .setMaxLength(500);
+
+          modal.addComponents(
+            new ActionRowBuilder<TextInputBuilder>()
+              .addComponents(reason)
+          );
+
+          await interaction.showModal(
+            modal
+          );
+
+          return;
+        }
+      }
+
+      if (
+        interaction.isModalSubmit() &&
+        interaction.customId ===
+          "utilityx_ticket_close_modal"
+      ) {
+        const reason =
+          interaction.fields.getTextInputValue(
+            "close_reason"
+          );
+
+        await closeTicket(
+          interaction,
+          reason
+        );
+
+        return;
+      }
+
+      if (
+        interaction.isChatInputCommand()
+      ) {
+        if (
+          interaction.commandName ===
+          "ping"
+        ) {
+          await executePing(
+            interaction
+          );
+        }
+
+        return;
       }
     } catch (error) {
       console.error(
-        `Error executing /${interaction.commandName}:`,
+        "Interaction error:",
         error
       );
+
+      if (!interaction.isRepliable()) {
+        return;
+      }
 
       if (
         interaction.replied ||
@@ -922,13 +1739,13 @@ client.on(
       ) {
         await interaction.followUp({
           content:
-            "Something went wrong while running that command.",
+            "Something went wrong while processing that action.",
           ephemeral: true,
         });
       } else {
         await interaction.reply({
           content:
-            "Something went wrong while running that command.",
+            "Something went wrong while processing that action.",
           ephemeral: true,
         });
       }
