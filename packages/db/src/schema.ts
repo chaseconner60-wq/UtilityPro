@@ -84,3 +84,43 @@ export const ownerActions = pgTable("owner_actions", {
 
   completedAt: timestamp("completed_at", { withTimezone: true }),
 });
+
+export const guildSettings = pgTable("guild_settings", {
+  guildId: text("guild_id").primaryKey(),
+
+  welcomeEnabled: boolean("welcome_enabled")
+    .notNull()
+    .default(false),
+
+  welcomeMessage: text("welcome_message")
+    .notNull()
+    .default("Welcome {user} to {server}!"),
+
+  goodbyeEnabled: boolean("goodbye_enabled")
+    .notNull()
+    .default(false),
+
+  goodbyeMessage: text("goodbye_message")
+    .notNull()
+    .default("{user} has left {server}."),
+
+  ticketsEnabled: boolean("tickets_enabled")
+    .notNull()
+    .default(false),
+
+  loggingEnabled: boolean("logging_enabled")
+    .notNull()
+    .default(false),
+
+  moderationEnabled: boolean("moderation_enabled")
+    .notNull()
+    .default(true),
+
+  automationEnabled: boolean("automation_enabled")
+    .notNull()
+    .default(false),
+
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

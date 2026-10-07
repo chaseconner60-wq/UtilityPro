@@ -8,6 +8,7 @@ import {
   globalSettings,
   bannedGuilds,
   ownerActions,
+  guildSettings,
 } from "@utilityx/db";
 
 const app = Fastify({
@@ -391,6 +392,158 @@ app.post<{
     error: "Unknown owner operation.",
   });
 });
+
+
+app.get<{
+  Params: { guildId: string };
+}>(
+  "/internal/guild-settings/:guildId",
+  async (request, reply) => {
+    const header =
+      request.headers["x-utilityx-internal-secret"];
+
+    if (
+      !internalAuthorized(
+        typeof header === "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply.code(401).send({
+        error: "Unauthorized",
+      });
+    }
+
+    const { guildId } = request.params;
+
+    const [installedGuild] = await db
+      .select()
+      .from(guilds)
+      .where(eq(guilds.id, guildId))
+      .limit(1);
+
+    if (!installedGuild) {
+      return reply.code(404).send({
+        error: "Guild not found",
+      });
+    }
+
+    let [settings] = await db
+      .select()
+      .from(guildSettings)
+      .where(eq(guildSettings.guildId, guildId))
+      .limit(1);
+
+    if (!settings) {
+      [settings] = await db
+        .insert(guildSettings)
+        .values({
+          guildId,
+        })
+        .returning();
+    }
+
+    return {
+      guild: installedGuild,
+      settings,
+    };
+  }
+);
+
+app.patch<{
+  Params: { guildId: string };
+  Body: {
+    welcomeEnabled?: boolean;
+    welcomeMessage?: string;
+    goodbyeEnabled?: boolean;
+    goodbyeMessage?: string;
+    ticketsEnabled?: boolean;
+    loggingEnabled?: boolean;
+    moderationEnabled?: boolean;
+    automationEnabled?: boolean;
+  };
+}>(
+  "/internal/guild-settings/:guildId",
+  async (request, reply) => {
+    const header =
+      request.headers["x-utilityx-internal-secret"];
+
+    if (
+      !internalAuthorized(
+        typeof header === "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply.code(401).send({
+        error: "Unauthorized",
+      });
+    }
+
+    const { guildId } = request.params;
+
+    let [current] = await db
+      .select()
+      .from(guildSettings)
+      .where(eq(guildSettings.guildId, guildId))
+      .limit(1);
+
+    if (!current) {
+      [current] = await db
+        .insert(guildSettings)
+        .values({
+          guildId,
+        })
+        .returning();
+    }
+
+    const body = request.body ?? {};
+
+    const [settings] = await db
+      .update(guildSettings)
+      .set({
+        welcomeEnabled:
+          body.welcomeEnabled ??
+          current.welcomeEnabled,
+
+        welcomeMessage:
+          body.welcomeMessage?.trim() ||
+          current.welcomeMessage,
+
+        goodbyeEnabled:
+          body.goodbyeEnabled ??
+          current.goodbyeEnabled,
+
+        goodbyeMessage:
+          body.goodbyeMessage?.trim() ||
+          current.goodbyeMessage,
+
+        ticketsEnabled:
+          body.ticketsEnabled ??
+          current.ticketsEnabled,
+
+        loggingEnabled:
+          body.loggingEnabled ??
+          current.loggingEnabled,
+
+        moderationEnabled:
+          body.moderationEnabled ??
+          current.moderationEnabled,
+
+        automationEnabled:
+          body.automationEnabled ??
+          current.automationEnabled,
+
+        updatedAt: new Date(),
+      })
+      .where(eq(guildSettings.guildId, guildId))
+      .returning();
+
+    return {
+      settings,
+    };
+  }
+);
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "0.0.0.0";
