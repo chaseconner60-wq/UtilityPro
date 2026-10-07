@@ -53,6 +53,17 @@ type Settings = {
   staffRoleId: string | null;
   moderatorRoleId: string | null;
 
+  autoRoleId: string | null;
+
+  welcomeUseEmbed: boolean;
+  goodbyeUseEmbed: boolean;
+
+  autoRoleEnabled: boolean;
+
+  logMemberEvents: boolean;
+  logMessageDeletes: boolean;
+  logRoleChanges: boolean;
+
   welcomeEnabled: boolean;
   welcomeMessage: string;
 
@@ -530,6 +541,20 @@ export default function ServerDashboard({
                   }
                 />
 
+                <SettingToggle
+                  title="Welcome Embed"
+                  description="Send the welcome message as a styled UtilityX embed instead of plain text."
+                  enabled={
+                    settings.welcomeUseEmbed
+                  }
+                  onChange={(enabled) =>
+                    void save({
+                      welcomeUseEmbed:
+                        enabled,
+                    })
+                  }
+                />
+
                 <ResourceSelect
                   title="Goodbye Channel"
                   description="Channel where UtilityX sends goodbye messages."
@@ -572,6 +597,62 @@ export default function ServerDashboard({
                     void save({
                       goodbyeMessage:
                         value,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Goodbye Embed"
+                  description="Send goodbye messages as a styled UtilityX embed."
+                  enabled={
+                    settings.goodbyeUseEmbed
+                  }
+                  onChange={(enabled) =>
+                    void save({
+                      goodbyeUseEmbed:
+                        enabled,
+                    })
+                  }
+                />
+
+                <div className="mt-8 border-t border-white/10 pt-8">
+                  <p className="text-sm font-medium text-indigo-400">
+                    Automatic Roles
+                  </p>
+
+                  <h3 className="mt-1 text-xl font-bold">
+                    Auto Role
+                  </h3>
+
+                  <p className="mt-2 text-sm text-zinc-500">
+                    Automatically give new members a Discord role when they join.
+                  </p>
+                </div>
+
+                <ResourceSelect
+                  title="Auto Role"
+                  description="Role UtilityX assigns to new members."
+                  value={settings.autoRoleId}
+                  options={selectableRoles}
+                  placeholder="Select an auto role"
+                  prefix="@"
+                  onChange={(value) =>
+                    void save({
+                      autoRoleId: value,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Auto Role Assignment"
+                  description="Automatically assign the selected role when a member joins."
+                  enabled={
+                    settings.autoRoleEnabled
+                  }
+                  onChange={(enabled) =>
+                    void save({
+                      autoRoleEnabled:
+                        enabled,
                     })
                   }
                 />
@@ -685,6 +766,48 @@ export default function ServerDashboard({
                   ) =>
                     void save({
                       loggingEnabled:
+                        enabled,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Member Events"
+                  description="Log members joining and leaving the server."
+                  enabled={
+                    settings.logMemberEvents
+                  }
+                  onChange={(enabled) =>
+                    void save({
+                      logMemberEvents:
+                        enabled,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Deleted Messages"
+                  description="Log message deletions when Discord provides the message data."
+                  enabled={
+                    settings.logMessageDeletes
+                  }
+                  onChange={(enabled) =>
+                    void save({
+                      logMessageDeletes:
+                        enabled,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Role Changes"
+                  description="Log roles added to or removed from members."
+                  enabled={
+                    settings.logRoleChanges
+                  }
+                  onChange={(enabled) =>
+                    void save({
+                      logRoleChanges:
                         enabled,
                     })
                   }

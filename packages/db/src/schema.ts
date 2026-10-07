@@ -93,6 +93,32 @@ export const guildSettings = pgTable("guild_settings", {
   goodbyeChannelId: text("goodbye_channel_id"),
   loggingChannelId: text("logging_channel_id"),
 
+  autoRoleId: text("auto_role_id"),
+
+  welcomeUseEmbed: boolean("welcome_use_embed")
+    .notNull()
+    .default(true),
+
+  goodbyeUseEmbed: boolean("goodbye_use_embed")
+    .notNull()
+    .default(true),
+
+  autoRoleEnabled: boolean("auto_role_enabled")
+    .notNull()
+    .default(false),
+
+  logMemberEvents: boolean("log_member_events")
+    .notNull()
+    .default(true),
+
+  logMessageDeletes: boolean("log_message_deletes")
+    .notNull()
+    .default(true),
+
+  logRoleChanges: boolean("log_role_changes")
+    .notNull()
+    .default(true),
+
   ticketCategoryId: text("ticket_category_id"),
   ticketAccessRoleId: text("ticket_access_role_id"),
 

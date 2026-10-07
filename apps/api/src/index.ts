@@ -473,6 +473,17 @@ app.patch<{
 
     staffRoleId?: string | null;
     moderatorRoleId?: string | null;
+
+    autoRoleId?: string | null;
+
+    welcomeUseEmbed?: boolean;
+    goodbyeUseEmbed?: boolean;
+
+    autoRoleEnabled?: boolean;
+
+    logMemberEvents?: boolean;
+    logMessageDeletes?: boolean;
+    logRoleChanges?: boolean;
   };
 }>(
   "/internal/guild-settings/:guildId",
@@ -580,6 +591,35 @@ app.patch<{
           body.moderatorRoleId !== undefined
             ? body.moderatorRoleId
             : current.moderatorRoleId,
+
+        autoRoleId:
+          body.autoRoleId !== undefined
+            ? body.autoRoleId
+            : current.autoRoleId,
+
+        welcomeUseEmbed:
+          body.welcomeUseEmbed ??
+          current.welcomeUseEmbed,
+
+        goodbyeUseEmbed:
+          body.goodbyeUseEmbed ??
+          current.goodbyeUseEmbed,
+
+        autoRoleEnabled:
+          body.autoRoleEnabled ??
+          current.autoRoleEnabled,
+
+        logMemberEvents:
+          body.logMemberEvents ??
+          current.logMemberEvents,
+
+        logMessageDeletes:
+          body.logMessageDeletes ??
+          current.logMessageDeletes,
+
+        logRoleChanges:
+          body.logRoleChanges ??
+          current.logRoleChanges,
 
         updatedAt: new Date(),
       })

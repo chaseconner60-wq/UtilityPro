@@ -43,6 +43,13 @@
       "when": 1791334577022,
       "tag": "0005_remarkable_dakota_north",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791335241028,
+      "tag": "0006_chubby_victor_mancha",
+      "breakpoints": true
     }
   ]
 }

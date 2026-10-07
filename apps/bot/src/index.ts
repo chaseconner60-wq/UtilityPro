@@ -4,6 +4,8 @@ import {
   GatewayIntentBits,
   REST,
   Routes,
+  EmbedBuilder,
+  Partials,
 } from "discord.js";
 
 import {
@@ -14,6 +16,7 @@ import {
   ownerActions,
   guildChannels,
   guildRoles,
+  guildSettings,
 } from "@utilityx/db";
 
 import { eq } from "drizzle-orm";
@@ -33,7 +36,15 @@ if (!token) {
 }
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+  ],
+  partials: [
+    Partials.Channel,
+    Partials.Message,
+  ],
 });
 
 const rest = new REST({ version: "10" }).setToken(token);
@@ -89,6 +100,96 @@ async function syncGuildResources(guild: any) {
   } catch (error) {
     console.error(
       `Failed to sync resources for ${guild.name}:`,
+      error
+    );
+  }
+}
+
+async function getGuildSettings(guildId: string) {
+  const [settings] = await db
+    .select()
+    .from(guildSettings)
+    .where(eq(guildSettings.guildId, guildId))
+    .limit(1);
+
+  return settings ?? null;
+}
+
+function formatMemberMessage(
+  template: string,
+  userMention: string,
+  serverName: string
+) {
+  return template
+    .replaceAll("{user}", userMention)
+    .replaceAll("{server}", serverName);
+}
+
+async function sendConfiguredMessage(
+  guild: any,
+  channelId: string,
+  message: string,
+  useEmbed: boolean,
+  title: string
+) {
+  try {
+    const channel =
+      await guild.channels.fetch(channelId);
+
+    if (!channel?.isTextBased()) {
+      return;
+    }
+
+    if (useEmbed) {
+      const embed = new EmbedBuilder()
+        .setTitle(title)
+        .setDescription(message)
+        .setTimestamp();
+
+      await channel.send({
+        embeds: [embed],
+      });
+    } else {
+      await channel.send({
+        content: message,
+      });
+    }
+  } catch (error) {
+    console.error(
+      `Failed to send configured message in ${guild.name}:`,
+      error
+    );
+  }
+}
+
+async function sendLog(
+  guild: any,
+  settings: any,
+  embed: EmbedBuilder
+) {
+  if (
+    !settings?.loggingEnabled ||
+    !settings.loggingChannelId
+  ) {
+    return;
+  }
+
+  try {
+    const channel =
+      await guild.channels.fetch(
+        settings.loggingChannelId
+      );
+
+    if (!channel?.isTextBased()) {
+      return;
+    }
+
+    await channel.send({
+      embeds: [embed],
+    });
+  } catch (error) {
+    console.error(
+      `Failed to send log in ${guild.name}:`,
       error
     );
   }
@@ -470,6 +571,280 @@ client.on(Events.GuildDelete, async (guild) => {
   } catch (error) {
     console.error(
       `Failed to remove guild ${guild.id}:`,
+      error
+    );
+  }
+});
+
+client.on(Events.GuildMemberAdd, async (member) => {
+  try {
+    const settings =
+      await getGuildSettings(member.guild.id);
+
+    if (!settings) return;
+
+    if (
+      settings.autoRoleEnabled &&
+      settings.autoRoleId
+    ) {
+      try {
+        await member.roles.add(
+          settings.autoRoleId
+        );
+
+        console.log(
+          `Auto role assigned to ${member.user.tag} in ${member.guild.name}.`
+        );
+      } catch (error) {
+        console.error(
+          `Failed to assign auto role in ${member.guild.name}:`,
+          error
+        );
+      }
+    }
+
+    if (
+      settings.welcomeEnabled &&
+      settings.welcomeChannelId
+    ) {
+      const message =
+        formatMemberMessage(
+          settings.welcomeMessage,
+          `<@${member.id}>`,
+          member.guild.name
+        );
+
+      await sendConfiguredMessage(
+        member.guild,
+        settings.welcomeChannelId,
+        message,
+        settings.welcomeUseEmbed,
+        "Welcome!"
+      );
+    }
+
+    if (
+      settings.loggingEnabled &&
+      settings.logMemberEvents
+    ) {
+      const embed =
+        new EmbedBuilder()
+          .setTitle("Member Joined")
+          .setDescription(
+            `<@${member.id}> joined the server.`
+          )
+          .addFields({
+            name: "User ID",
+            value: member.id,
+          })
+          .setTimestamp();
+
+      await sendLog(
+        member.guild,
+        settings,
+        embed
+      );
+    }
+  } catch (error) {
+    console.error(
+      "GuildMemberAdd handler failed:",
+      error
+    );
+  }
+});
+
+client.on(Events.GuildMemberRemove, async (member) => {
+  try {
+    const settings =
+      await getGuildSettings(member.guild.id);
+
+    if (!settings) return;
+
+    if (
+      settings.goodbyeEnabled &&
+      settings.goodbyeChannelId
+    ) {
+      const message =
+        formatMemberMessage(
+          settings.goodbyeMessage,
+          member.user.tag,
+          member.guild.name
+        );
+
+      await sendConfiguredMessage(
+        member.guild,
+        settings.goodbyeChannelId,
+        message,
+        settings.goodbyeUseEmbed,
+        "Member Left"
+      );
+    }
+
+    if (
+      settings.loggingEnabled &&
+      settings.logMemberEvents
+    ) {
+      const embed =
+        new EmbedBuilder()
+          .setTitle("Member Left")
+          .setDescription(
+            `${member.user.tag} left the server.`
+          )
+          .addFields({
+            name: "User ID",
+            value: member.id,
+          })
+          .setTimestamp();
+
+      await sendLog(
+        member.guild,
+        settings,
+        embed
+      );
+    }
+  } catch (error) {
+    console.error(
+      "GuildMemberRemove handler failed:",
+      error
+    );
+  }
+});
+
+client.on(
+  Events.GuildMemberUpdate,
+  async (oldMember, newMember) => {
+    try {
+      const settings =
+        await getGuildSettings(
+          newMember.guild.id
+        );
+
+      if (
+        !settings ||
+        !settings.loggingEnabled ||
+        !settings.logRoleChanges
+      ) {
+        return;
+      }
+
+      const oldRoles =
+        oldMember.roles.cache;
+
+      const newRoles =
+        newMember.roles.cache;
+
+      const added =
+        newRoles.filter(
+          (role) =>
+            !oldRoles.has(role.id)
+        );
+
+      const removed =
+        oldRoles.filter(
+          (role) =>
+            !newRoles.has(role.id)
+        );
+
+      if (!added.size && !removed.size) {
+        return;
+      }
+
+      const embed =
+        new EmbedBuilder()
+          .setTitle("Member Roles Updated")
+          .setDescription(
+            `<@${newMember.id}> had their roles changed.`
+          )
+          .setTimestamp();
+
+      if (added.size) {
+        embed.addFields({
+          name: "Roles Added",
+          value: added
+            .map((role) => role.name)
+            .join(", ")
+            .slice(0, 1024),
+        });
+      }
+
+      if (removed.size) {
+        embed.addFields({
+          name: "Roles Removed",
+          value: removed
+            .map((role) => role.name)
+            .join(", ")
+            .slice(0, 1024),
+        });
+      }
+
+      await sendLog(
+        newMember.guild,
+        settings,
+        embed
+      );
+    } catch (error) {
+      console.error(
+        "GuildMemberUpdate handler failed:",
+        error
+      );
+    }
+  }
+);
+
+client.on(Events.MessageDelete, async (message) => {
+  try {
+    if (!message.guild) return;
+
+    const settings =
+      await getGuildSettings(
+        message.guild.id
+      );
+
+    if (
+      !settings ||
+      !settings.loggingEnabled ||
+      !settings.logMessageDeletes
+    ) {
+      return;
+    }
+
+    const author =
+      message.author
+        ? `${message.author.tag} (${message.author.id})`
+        : "Unknown / uncached user";
+
+    const content =
+      message.content?.trim()
+        ? message.content.slice(0, 1000)
+        : "Message content was unavailable.";
+
+    const embed =
+      new EmbedBuilder()
+        .setTitle("Message Deleted")
+        .addFields(
+          {
+            name: "Author",
+            value: author,
+          },
+          {
+            name: "Channel",
+            value: `<#${message.channelId}>`,
+          },
+          {
+            name: "Content",
+            value: content,
+          }
+        )
+        .setTimestamp();
+
+    await sendLog(
+      message.guild,
+      settings,
+      embed
+    );
+  } catch (error) {
+    console.error(
+      "MessageDelete handler failed:",
       error
     );
   }
