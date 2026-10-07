@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useEffect,
   useState,
 } from "react";
 
@@ -39,20 +38,19 @@ export default function ServerDashboard({
   guildName,
   iconUrl,
   owner,
+  initialSettings,
 }: {
   guildId: string;
   guildName: string;
   iconUrl: string | null;
   owner: boolean;
+  initialSettings: Settings;
 }) {
   const [section, setSection] =
     useState<Section>("overview");
 
   const [settings, setSettings] =
-    useState<Settings | null>(null);
-
-  const [loading, setLoading] =
-    useState(true);
+    useState<Settings>(initialSettings);
 
   const [saving, setSaving] =
     useState(false);
@@ -60,40 +58,9 @@ export default function ServerDashboard({
   const [status, setStatus] =
     useState("");
 
-  useEffect(() => {
-    async function load() {
-      const response = await fetch(
-        `/api/guilds/${guildId}/settings`,
-        {
-          cache: "no-store",
-        }
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        setStatus(
-          data.error ||
-            "Unable to load settings."
-        );
-
-        setLoading(false);
-        return;
-      }
-
-      setSettings(data.settings);
-      setLoading(false);
-    }
-
-    void load();
-  }, [guildId]);
-
   async function save(
     changes: Partial<Settings>
   ) {
-    if (!settings) return;
-
     const next = {
       ...settings,
       ...changes,
@@ -180,16 +147,6 @@ export default function ServerDashboard({
       detail: "Automatic actions",
     },
   ];
-
-  if (loading || !settings) {
-    return (
-      <main className="min-h-screen bg-[#07080b] text-white">
-        <div className="flex min-h-screen items-center justify-center text-zinc-400">
-          Loading UtilityX server configuration...
-        </div>
-      </main>
-    );
-  }
 
   const modules = [
     {

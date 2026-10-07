@@ -141,6 +141,33 @@ export default async function GuildPage({
     );
   }
 
+  const internalSecret =
+    process.env.INTERNAL_API_SECRET;
+
+  if (!internalSecret) {
+    throw new Error(
+      "INTERNAL_API_SECRET is not configured."
+    );
+  }
+
+  const settingsResponse = await fetch(
+    `${apiUrl}/internal/guild-settings/${guildId}`,
+    {
+      headers: {
+        "x-utilityx-internal-secret": internalSecret,
+      },
+      cache: "no-store",
+    }
+  );
+
+  if (!settingsResponse.ok) {
+    throw new Error(
+      "Unable to load UtilityX server settings."
+    );
+  }
+
+  const settingsData = await settingsResponse.json();
+
   const iconUrl =
     guild.icon
       ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=256`
@@ -154,6 +181,7 @@ export default async function GuildPage({
       }
       iconUrl={iconUrl}
       owner={guild.owner}
+      initialSettings={settingsData.settings}
     />
   );
 }
