@@ -54,6 +54,7 @@ type Settings = {
   moderatorRoleId: string | null;
 
   autoRoleId: string | null;
+  autoRoleIds: string[];
 
   welcomeUseEmbed: boolean;
   goodbyeUseEmbed: boolean;
@@ -629,16 +630,15 @@ export default function ServerDashboard({
                   </p>
                 </div>
 
-                <ResourceSelect
-                  title="Auto Role"
-                  description="Role UtilityX assigns to new members."
-                  value={settings.autoRoleId}
+                <MultiRoleSelect
+                  title="Auto Roles"
+                  description="UtilityX can automatically assign up to 5 roles when a new member joins."
+                  values={settings.autoRoleIds ?? []}
                   options={selectableRoles}
-                  placeholder="Select an auto role"
-                  prefix="@"
-                  onChange={(value) =>
+                  limit={5}
+                  onChange={(values) =>
                     void save({
-                      autoRoleId: value,
+                      autoRoleIds: values,
                     })
                   }
                 />
@@ -1045,6 +1045,115 @@ function MessageEditor({
           Save Message
         </button>
       </div>
+    </div>
+  );
+}
+
+function MultiRoleSelect({
+  title,
+  description,
+  values,
+  options,
+  limit,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  values: string[];
+  options: {
+    id: string;
+    name: string;
+  }[];
+  limit: number;
+  onChange: (values: string[]) => void;
+}) {
+  const available = options.filter(
+    (option) => !values.includes(option.id)
+  );
+
+  function addRole(roleId: string) {
+    if (!roleId || values.length >= limit) {
+      return;
+    }
+
+    onChange([...values, roleId]);
+  }
+
+  function removeRole(roleId: string) {
+    onChange(
+      values.filter((value) => value !== roleId)
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <label className="font-semibold">
+            {title}
+          </label>
+
+          <p className="mt-1 text-sm text-zinc-500">
+            {description}
+          </p>
+        </div>
+
+        <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300">
+          {values.length} / {limit}
+        </span>
+      </div>
+
+      {values.length > 0 && (
+        <div className="mt-5 flex flex-wrap gap-2">
+          {values.map((roleId) => {
+            const role = options.find(
+              (option) => option.id === roleId
+            );
+
+            return (
+              <button
+                key={roleId}
+                type="button"
+                onClick={() => removeRole(roleId)}
+                className="inline-flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-200 transition hover:bg-red-500/10 hover:text-red-300"
+              >
+                @{role?.name ?? "Unknown Role"}
+                <span className="text-xs opacity-60">
+                  ×
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <select
+        value=""
+        disabled={values.length >= limit}
+        onChange={(event) =>
+          addRole(event.target.value)
+        }
+        className="mt-5 w-full rounded-xl border border-white/10 bg-[#0d0e12] px-4 py-3 text-sm text-white outline-none focus:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <option value="">
+          {values.length >= limit
+            ? "Auto-role limit reached"
+            : "Add another role..."}
+        </option>
+
+        {available.map((role) => (
+          <option
+            key={role.id}
+            value={role.id}
+          >
+            @{role.name}
+          </option>
+        ))}
+      </select>
+
+      <p className="mt-3 text-xs text-zinc-600">
+        Click a selected role above to remove it.
+      </p>
     </div>
   );
 }

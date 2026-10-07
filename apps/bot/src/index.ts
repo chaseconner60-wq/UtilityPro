@@ -585,19 +585,50 @@ client.on(Events.GuildMemberAdd, async (member) => {
 
     if (
       settings.autoRoleEnabled &&
-      settings.autoRoleId
+      settings.autoRoleIds?.length
     ) {
       try {
-        await member.roles.add(
-          settings.autoRoleId
-        );
+        const configuredRoleIds =
+          settings.autoRoleIds.slice(0, 5);
 
-        console.log(
-          `Auto role assigned to ${member.user.tag} in ${member.guild.name}.`
-        );
+        const manageableRoleIds: string[] = [];
+        const skippedRoles: string[] = [];
+
+        for (const roleId of configuredRoleIds) {
+          const role =
+            await member.guild.roles.fetch(roleId);
+
+          if (!role) {
+            skippedRoles.push(roleId);
+            continue;
+          }
+
+          if (!role.editable) {
+            skippedRoles.push(role.name);
+            continue;
+          }
+
+          manageableRoleIds.push(role.id);
+        }
+
+        if (manageableRoleIds.length) {
+          await member.roles.add(
+            manageableRoleIds
+          );
+
+          console.log(
+            `Assigned ${manageableRoleIds.length} auto role(s) to ${member.user.tag} in ${member.guild.name}.`
+          );
+        }
+
+        if (skippedRoles.length) {
+          console.warn(
+            `Skipped unmanageable auto roles in ${member.guild.name}: ${skippedRoles.join(", ")}`
+          );
+        }
       } catch (error) {
         console.error(
-          `Failed to assign auto role in ${member.guild.name}:`,
+          `Failed to assign auto roles in ${member.guild.name}:`,
           error
         );
       }

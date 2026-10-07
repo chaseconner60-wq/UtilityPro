@@ -475,6 +475,7 @@ app.patch<{
     moderatorRoleId?: string | null;
 
     autoRoleId?: string | null;
+    autoRoleIds?: string[];
 
     welcomeUseEmbed?: boolean;
     goodbyeUseEmbed?: boolean;
@@ -521,6 +522,24 @@ app.patch<{
     }
 
     const body = request.body ?? {};
+
+    if (
+      body.autoRoleIds !== undefined &&
+      (!Array.isArray(body.autoRoleIds) ||
+        body.autoRoleIds.length > 5 ||
+        body.autoRoleIds.some(
+          (roleId) => typeof roleId !== "string"
+        ))
+    ) {
+      return reply.code(400).send({
+        error: "You may configure up to 5 auto roles.",
+      });
+    }
+
+    const normalizedAutoRoleIds =
+      body.autoRoleIds !== undefined
+        ? [...new Set(body.autoRoleIds)]
+        : current.autoRoleIds;
 
     const [settings] = await db
       .update(guildSettings)
@@ -596,6 +615,9 @@ app.patch<{
           body.autoRoleId !== undefined
             ? body.autoRoleId
             : current.autoRoleId,
+
+        autoRoleIds:
+          normalizedAutoRoleIds,
 
         welcomeUseEmbed:
           body.welcomeUseEmbed ??

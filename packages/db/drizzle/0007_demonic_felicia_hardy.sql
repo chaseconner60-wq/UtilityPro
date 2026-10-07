@@ -1,0 +1,1 @@
+ALTER TABLE "guild_settings" ADD COLUMN "auto_role_ids" jsonb DEFAULT '[]'::jsonb NOT NULL;

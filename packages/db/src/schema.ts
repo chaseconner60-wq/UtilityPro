@@ -1,6 +1,7 @@
 import {
   boolean,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -94,6 +95,11 @@ export const guildSettings = pgTable("guild_settings", {
   loggingChannelId: text("logging_channel_id"),
 
   autoRoleId: text("auto_role_id"),
+
+  autoRoleIds: jsonb("auto_role_ids")
+    .$type<string[]>()
+    .notNull()
+    .default([]),
 
   welcomeUseEmbed: boolean("welcome_use_embed")
     .notNull()
