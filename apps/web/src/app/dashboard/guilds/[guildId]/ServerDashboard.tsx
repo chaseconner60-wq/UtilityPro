@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useState,
 } from "react";
 
@@ -64,6 +65,14 @@ type Settings = {
   staffRoleId: string | null;
   moderatorRoleId: string | null;
 
+  moderationLogChannelId: string | null;
+
+  warnEnabled: boolean;
+  timeoutEnabled: boolean;
+  kickEnabled: boolean;
+  banEnabled: boolean;
+  purgeEnabled: boolean;
+
   autoRoleId: string | null;
   autoRoleIds: string[];
 
@@ -114,6 +123,62 @@ export default function ServerDashboard({
 
   const [status, setStatus] =
     useState("");
+
+  const [moderationHistory, setModerationHistory] =
+    useState<any[]>([]);
+
+  const [loadingModerationHistory, setLoadingModerationHistory] =
+    useState(false);
+
+  useEffect(() => {
+    if (section !== "moderation") {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadHistory() {
+      setLoadingModerationHistory(true);
+
+      try {
+        const response =
+          await fetch(
+            `/api/guilds/${guildId}/moderation`,
+            {
+              cache: "no-store",
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (
+          !cancelled &&
+          response.ok
+        ) {
+          setModerationHistory(
+            data.actions ?? []
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingModerationHistory(
+            false
+          );
+        }
+      }
+    }
+
+    void loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    section,
+    guildId,
+  ]);
+
 
   async function save(
     changes: Partial<Settings>
@@ -977,45 +1042,13 @@ export default function ServerDashboard({
               <ModulePage
                 eyebrow="Safety"
                 title="Moderation"
-                description="Control UtilityX moderation features."
+                description="Configure UtilityX moderation commands, roles and audit history."
               >
-                <ResourceSelect
-                  title="Staff Role"
-                  description="Primary staff role used by UtilityX."
-                  value={settings.staffRoleId}
-                  options={selectableRoles}
-                  placeholder="Select staff role"
-                  prefix="@"
-                  onChange={(value) =>
-                    void save({
-                      staffRoleId: value,
-                    })
-                  }
-                />
-
-                <ResourceSelect
-                  title="Moderator Role"
-                  description="Role permitted to use moderation features."
-                  value={settings.moderatorRoleId}
-                  options={selectableRoles}
-                  placeholder="Select moderator role"
-                  prefix="@"
-                  onChange={(value) =>
-                    void save({
-                      moderatorRoleId: value,
-                    })
-                  }
-                />
-
                 <SettingToggle
                   title="Moderation Tools"
-                  description="Allow moderation functionality in this server."
-                  enabled={
-                    settings.moderationEnabled
-                  }
-                  onChange={(
-                    enabled
-                  ) =>
+                  description="Enable UtilityX moderation commands for this server."
+                  enabled={settings.moderationEnabled}
+                  onChange={(enabled) =>
                     void save({
                       moderationEnabled:
                         enabled,
@@ -1023,13 +1056,194 @@ export default function ServerDashboard({
                   }
                 />
 
-                <ComingNext>
-                  Warning history,
-                  moderation roles,
-                  command permissions,
-                  anti-spam and automod
-                  controls will live here.
-                </ComingNext>
+                <ResourceSelect
+                  title="Staff Role"
+                  description="Primary staff role allowed to use moderation tools."
+                  value={settings.staffRoleId}
+                  options={selectableRoles}
+                  placeholder="Select staff role"
+                  prefix="@"
+                  onChange={(value) =>
+                    void save({
+                      staffRoleId:
+                        value,
+                    })
+                  }
+                />
+
+                <ResourceSelect
+                  title="Moderator Role"
+                  description="Role allowed to use UtilityX moderation commands."
+                  value={settings.moderatorRoleId}
+                  options={selectableRoles}
+                  placeholder="Select moderator role"
+                  prefix="@"
+                  onChange={(value) =>
+                    void save({
+                      moderatorRoleId:
+                        value,
+                    })
+                  }
+                />
+
+                <ResourceSelect
+                  title="Moderation Log Channel"
+                  description="Channel where UtilityX sends moderation action logs."
+                  value={settings.moderationLogChannelId}
+                  options={textChannels}
+                  placeholder="Select moderation log channel"
+                  prefix="#"
+                  onChange={(value) =>
+                    void save({
+                      moderationLogChannelId:
+                        value,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Warnings"
+                  description="Enable /warn, /warnings and /clearwarnings."
+                  enabled={settings.warnEnabled}
+                  onChange={(enabled) =>
+                    void save({
+                      warnEnabled:
+                        enabled,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Timeouts"
+                  description="Enable /timeout moderation actions."
+                  enabled={settings.timeoutEnabled}
+                  onChange={(enabled) =>
+                    void save({
+                      timeoutEnabled:
+                        enabled,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Kicks"
+                  description="Enable /kick moderation actions."
+                  enabled={settings.kickEnabled}
+                  onChange={(enabled) =>
+                    void save({
+                      kickEnabled:
+                        enabled,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Bans"
+                  description="Enable /ban and /unban moderation actions."
+                  enabled={settings.banEnabled}
+                  onChange={(enabled) =>
+                    void save({
+                      banEnabled:
+                        enabled,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Message Purge"
+                  description="Enable /purge for deleting up to 100 recent messages."
+                  enabled={settings.purgeEnabled}
+                  onChange={(enabled) =>
+                    void save({
+                      purgeEnabled:
+                        enabled,
+                    })
+                  }
+                />
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold">
+                        Moderation History
+                      </h3>
+
+                      <p className="mt-1 text-sm text-zinc-500">
+                        Recent UtilityX moderation actions in this server.
+                      </p>
+                    </div>
+
+                    <span className="text-xs text-zinc-600">
+                      Last 50
+                    </span>
+                  </div>
+
+                  <div className="mt-5 space-y-2">
+                    {loadingModerationHistory ? (
+                      <p className="text-sm text-zinc-500">
+                        Loading moderation history...
+                      </p>
+                    ) : moderationHistory.length ? (
+                      moderationHistory.map(
+                        (action) => (
+                          <div
+                            key={action.id}
+                            className="rounded-xl border border-white/10 bg-black/20 p-4"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <span className="font-medium capitalize">
+                                {String(
+                                  action.type
+                                ).replaceAll(
+                                  "_",
+                                  " "
+                                )}
+                              </span>
+
+                              <span className="text-xs text-zinc-600">
+                                {new Date(
+                                  action.createdAt
+                                ).toLocaleString()}
+                              </span>
+                            </div>
+
+                            <div className="mt-2 text-sm text-zinc-400">
+                              Moderator:{" "}
+                              <code>
+                                {action.moderatorId}
+                              </code>
+                            </div>
+
+                            {action.targetUserId && (
+                              <div className="mt-1 text-sm text-zinc-400">
+                                Target:{" "}
+                                <code>
+                                  {action.targetUserId}
+                                </code>
+                              </div>
+                            )}
+
+                            {action.reason && (
+                              <p className="mt-2 text-sm text-zinc-500">
+                                {action.reason}
+                              </p>
+                            )}
+
+                            {action.details && (
+                              <p className="mt-1 text-xs text-zinc-600">
+                                {action.details}
+                              </p>
+                            )}
+                          </div>
+                        )
+                      )
+                    ) : (
+                      <p className="text-sm text-zinc-500">
+                        No moderation actions recorded yet.
+                      </p>
+                    )}
+                  </div>
+                </div>
               </ModulePage>
             )}
 

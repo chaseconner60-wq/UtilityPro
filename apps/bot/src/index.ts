@@ -37,6 +37,12 @@ import {
   execute as executePing,
 } from "./commands/ping.js";
 
+import {
+  handleModerationCommand,
+  moderationCommandData,
+  moderationCommands,
+} from "./commands/moderation.js";
+
 const token = process.env.DISCORD_TOKEN;
 const ownerId = process.env.BOT_OWNER_ID;
 const clientId = "1548859144566480926";
@@ -1156,7 +1162,13 @@ client.once(Events.ClientReady, async (readyClient) => {
     await rest.put(
       Routes.applicationCommands(clientId),
       {
-        body: [pingData.toJSON()],
+        body: [
+          pingData.toJSON(),
+          ...moderationCommandData.map(
+            (command) =>
+              command.toJSON()
+          ),
+        ],
       }
     );
 
@@ -1719,6 +1731,20 @@ client.on(
           await executePing(
             interaction
           );
+
+          return;
+        }
+
+        if (
+          moderationCommands.has(
+            interaction.commandName
+          )
+        ) {
+          await handleModerationCommand(
+            interaction
+          );
+
+          return;
         }
 
         return;

@@ -155,6 +155,28 @@ export const guildSettings = pgTable("guild_settings", {
   staffRoleId: text("staff_role_id"),
   moderatorRoleId: text("moderator_role_id"),
 
+  moderationLogChannelId: text("moderation_log_channel_id"),
+
+  warnEnabled: boolean("warn_enabled")
+    .notNull()
+    .default(true),
+
+  timeoutEnabled: boolean("timeout_enabled")
+    .notNull()
+    .default(true),
+
+  kickEnabled: boolean("kick_enabled")
+    .notNull()
+    .default(true),
+
+  banEnabled: boolean("ban_enabled")
+    .notNull()
+    .default(true),
+
+  purgeEnabled: boolean("purge_enabled")
+    .notNull()
+    .default(true),
+
   welcomeEnabled: boolean("welcome_enabled")
     .notNull()
     .default(false),
@@ -271,3 +293,47 @@ export const guildActions = pgTable("guild_actions", {
 
   completedAt: timestamp("completed_at", { withTimezone: true }),
 });
+
+
+export const warnings = pgTable("warnings", {
+  id: text("id").primaryKey(),
+
+  guildId: text("guild_id").notNull(),
+
+  userId: text("user_id").notNull(),
+
+  moderatorId: text("moderator_id").notNull(),
+
+  reason: text("reason").notNull(),
+
+  createdAt: timestamp("created_at", {
+    withTimezone: true,
+  })
+    .notNull()
+    .defaultNow(),
+});
+
+export const moderationActions = pgTable(
+  "moderation_actions",
+  {
+    id: text("id").primaryKey(),
+
+    guildId: text("guild_id").notNull(),
+
+    type: text("type").notNull(),
+
+    targetUserId: text("target_user_id"),
+
+    moderatorId: text("moderator_id").notNull(),
+
+    reason: text("reason"),
+
+    details: text("details"),
+
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  }
+);

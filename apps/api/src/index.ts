@@ -13,6 +13,8 @@ import {
   guildRoles,
   tickets,
   guildActions,
+  warnings,
+  moderationActions,
 } from "@utilityx/db";
 
 const app = Fastify({
@@ -486,6 +488,14 @@ app.patch<{
     staffRoleId?: string | null;
     moderatorRoleId?: string | null;
 
+    moderationLogChannelId?: string | null;
+
+    warnEnabled?: boolean;
+    timeoutEnabled?: boolean;
+    kickEnabled?: boolean;
+    banEnabled?: boolean;
+    purgeEnabled?: boolean;
+
     autoRoleId?: string | null;
     autoRoleIds?: string[];
 
@@ -652,6 +662,31 @@ app.patch<{
           body.moderatorRoleId !== undefined
             ? body.moderatorRoleId
             : current.moderatorRoleId,
+
+        moderationLogChannelId:
+          body.moderationLogChannelId !== undefined
+            ? body.moderationLogChannelId
+            : current.moderationLogChannelId,
+
+        warnEnabled:
+          body.warnEnabled ??
+          current.warnEnabled,
+
+        timeoutEnabled:
+          body.timeoutEnabled ??
+          current.timeoutEnabled,
+
+        kickEnabled:
+          body.kickEnabled ??
+          current.kickEnabled,
+
+        banEnabled:
+          body.banEnabled ??
+          current.banEnabled,
+
+        purgeEnabled:
+          body.purgeEnabled ??
+          current.purgeEnabled,
 
         autoRoleId:
           body.autoRoleId !== undefined
@@ -821,6 +856,73 @@ app.post<{
     return {
       success: true,
       actionId,
+    };
+  }
+);
+
+
+app.get<{
+  Params: {
+    guildId: string;
+  };
+}>(
+  "/internal/moderation/:guildId",
+  async (request, reply) => {
+    const header =
+      request.headers[
+        "x-utilityx-internal-secret"
+      ];
+
+    if (
+      !internalAuthorized(
+        typeof header === "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply.code(401).send({
+        error: "Unauthorized",
+      });
+    }
+
+    const { guildId } =
+      request.params;
+
+    const warningRows =
+      await db
+        .select()
+        .from(warnings)
+        .where(
+          eq(
+            warnings.guildId,
+            guildId
+          )
+        )
+        .orderBy(
+          desc(warnings.createdAt)
+        )
+        .limit(50);
+
+    const actionRows =
+      await db
+        .select()
+        .from(moderationActions)
+        .where(
+          eq(
+            moderationActions.guildId,
+            guildId
+          )
+        )
+        .orderBy(
+          desc(
+            moderationActions.createdAt
+          )
+        )
+        .limit(50);
+
+    return {
+      warnings: warningRows,
+      actions: actionRows,
     };
   }
 );

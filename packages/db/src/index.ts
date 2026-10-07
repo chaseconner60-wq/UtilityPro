@@ -21,4 +21,6 @@ export {
   guildRoles,
   tickets,
   guildActions,
+  warnings,
+  moderationActions,
 } from "./schema.js";
