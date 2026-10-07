@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import MaintenanceControls from "./MaintenanceControls";
+import OwnerOperations from "./OwnerOperations";
 
 type Guild = {
   id: string;
@@ -330,6 +331,8 @@ export default function AdminDashboardClient({
                     </button>
                   </div>
                 </div>
+
+                <OwnerOperations />
               </>
             )}
 

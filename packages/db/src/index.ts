@@ -11,4 +11,4 @@ const client = postgres(connectionString);
 
 export const db = drizzle(client);
 
-export { guilds, globalSettings } from "./schema.js";
+export { guilds, globalSettings, bannedGuilds, ownerActions } from "./schema.js";

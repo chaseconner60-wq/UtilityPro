@@ -1,11 +1,13 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
-import { eq, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import {
   db,
   guilds,
   globalSettings,
+  bannedGuilds,
+  ownerActions,
 } from "@utilityx/db";
 
 const app = Fastify({
@@ -186,6 +188,209 @@ app.patch<{
     };
   }
 );
+
+
+app.get("/internal/owner-data", async (request, reply) => {
+  const header = request.headers["x-utilityx-internal-secret"];
+
+  if (
+    !internalAuthorized(
+      typeof header === "string" ? header : undefined
+    )
+  ) {
+    return reply.code(401).send({
+      error: "Unauthorized",
+    });
+  }
+
+  const [installedGuilds, bans, actions] = await Promise.all([
+    db
+      .select({
+        id: guilds.id,
+        name: guilds.name,
+        createdAt: guilds.createdAt,
+        updatedAt: guilds.updatedAt,
+      })
+      .from(guilds),
+
+    db
+      .select()
+      .from(bannedGuilds)
+      .orderBy(desc(bannedGuilds.bannedAt)),
+
+    db
+      .select()
+      .from(ownerActions)
+      .orderBy(desc(ownerActions.createdAt))
+      .limit(100),
+  ]);
+
+  return {
+    guilds: installedGuilds,
+    bans,
+    actions,
+  };
+});
+
+app.post<{
+  Body: {
+    operation:
+      | "remove_guild"
+      | "ban_guild"
+      | "unban_guild"
+      | "announcement";
+    guildId?: string;
+    guildName?: string;
+    reason?: string;
+    message?: string;
+    ownerId?: string;
+  };
+}>("/internal/owner-action", async (request, reply) => {
+  const header = request.headers["x-utilityx-internal-secret"];
+
+  if (
+    !internalAuthorized(
+      typeof header === "string" ? header : undefined
+    )
+  ) {
+    return reply.code(401).send({
+      error: "Unauthorized",
+    });
+  }
+
+  const {
+    operation,
+    guildId,
+    guildName,
+    reason,
+    message,
+    ownerId,
+  } = request.body ?? {};
+
+  if (operation === "ban_guild") {
+    if (!guildId || !reason?.trim() || !ownerId) {
+      return reply.code(400).send({
+        error: "Guild ID, owner ID, and reason are required.",
+      });
+    }
+
+    await db
+      .insert(bannedGuilds)
+      .values({
+        guildId,
+        guildName: guildName || "Unknown Guild",
+        reason: reason.trim(),
+        bannedBy: ownerId,
+      })
+      .onConflictDoUpdate({
+        target: bannedGuilds.guildId,
+        set: {
+          guildName: guildName || "Unknown Guild",
+          reason: reason.trim(),
+          bannedBy: ownerId,
+          bannedAt: new Date(),
+        },
+      });
+
+    const actionId = crypto.randomUUID();
+
+    await db.insert(ownerActions).values({
+      id: actionId,
+      type: "ban_guild",
+      guildId,
+      guildName: guildName || null,
+      reason: reason.trim(),
+      status: "pending",
+    });
+
+    return {
+      success: true,
+      actionId,
+    };
+  }
+
+  if (operation === "unban_guild") {
+    if (!guildId) {
+      return reply.code(400).send({
+        error: "Guild ID is required.",
+      });
+    }
+
+    await db
+      .delete(bannedGuilds)
+      .where(eq(bannedGuilds.guildId, guildId));
+
+    await db.insert(ownerActions).values({
+      id: crypto.randomUUID(),
+      type: "unban_guild",
+      guildId,
+      guildName: guildName || null,
+      status: "completed",
+      result: "Guild ban removed.",
+      completedAt: new Date(),
+    });
+
+    return {
+      success: true,
+    };
+  }
+
+  if (operation === "remove_guild") {
+    if (!guildId) {
+      return reply.code(400).send({
+        error: "Guild ID is required.",
+      });
+    }
+
+    const actionId = crypto.randomUUID();
+
+    await db.insert(ownerActions).values({
+      id: actionId,
+      type: "remove_guild",
+      guildId,
+      guildName: guildName || null,
+      reason: reason?.trim() || null,
+      status: "pending",
+    });
+
+    return {
+      success: true,
+      actionId,
+    };
+  }
+
+  if (operation === "announcement") {
+    if (!message?.trim()) {
+      return reply.code(400).send({
+        error: "Announcement message is required.",
+      });
+    }
+
+    if (message.length > 1800) {
+      return reply.code(400).send({
+        error: "Announcement is too long.",
+      });
+    }
+
+    const actionId = crypto.randomUUID();
+
+    await db.insert(ownerActions).values({
+      id: actionId,
+      type: "announcement",
+      message: message.trim(),
+      status: "pending",
+    });
+
+    return {
+      success: true,
+      actionId,
+    };
+  }
+
+  return reply.code(400).send({
+    error: "Unknown owner operation.",
+  });
+});
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "0.0.0.0";

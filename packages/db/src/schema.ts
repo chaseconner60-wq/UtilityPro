@@ -42,3 +42,45 @@ export const globalSettings = pgTable("global_settings", {
     .notNull()
     .defaultNow(),
 });
+
+export const bannedGuilds = pgTable("banned_guilds", {
+  guildId: text("guild_id").primaryKey(),
+
+  guildName: text("guild_name")
+    .notNull()
+    .default("Unknown Guild"),
+
+  reason: text("reason").notNull(),
+
+  bannedBy: text("banned_by").notNull(),
+
+  bannedAt: timestamp("banned_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const ownerActions = pgTable("owner_actions", {
+  id: text("id").primaryKey(),
+
+  type: text("type").notNull(),
+
+  guildId: text("guild_id"),
+
+  guildName: text("guild_name"),
+
+  reason: text("reason"),
+
+  message: text("message"),
+
+  status: text("status")
+    .notNull()
+    .default("pending"),
+
+  result: text("result"),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+});
