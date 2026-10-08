@@ -28,6 +28,8 @@ import {
   guildSettings,
   tickets,
   guildActions,
+  warnings,
+  moderationActions,
 } from "@utilityx/db";
 
 import { and, eq } from "drizzle-orm";
@@ -57,6 +59,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
   ],
   partials: [
     Partials.Channel,
@@ -913,6 +916,509 @@ async function closeTicket(
   }, 3000);
 }
 
+const spamTracker =
+  new Map<string, number[]>();
+
+const duplicateTracker =
+  new Map<
+    string,
+    {
+      content: string;
+      count: number;
+      timestamp: number;
+    }
+  >();
+
+function containsBlockedWord(
+  content: string,
+  words: string[]
+) {
+  const normalized =
+    content.toLowerCase();
+
+  return words.some((word) => {
+    const cleaned =
+      word.trim().toLowerCase();
+
+    if (!cleaned) {
+      return false;
+    }
+
+    const escaped =
+      cleaned.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      );
+
+    return new RegExp(
+      `\\b${escaped}\\b`,
+      "i"
+    ).test(normalized);
+  });
+}
+
+function hasDiscordInvite(
+  content: string
+) {
+  return /(discord\.gg\/|discord\.com\/invite\/)/i.test(
+    content
+  );
+}
+
+function hasExternalLink(
+  content: string
+) {
+  return /https?:\/\/|www\./i.test(
+    content
+  );
+}
+
+function excessiveCaps(
+  content: string,
+  percentage: number
+) {
+  const letters =
+    content.match(/[a-z]/gi);
+
+  if (
+    !letters ||
+    letters.length < 10
+  ) {
+    return false;
+  }
+
+  const uppercase =
+    letters.filter(
+      (letter) =>
+        letter ===
+        letter.toUpperCase()
+    ).length;
+
+  return (
+    (uppercase / letters.length) *
+      100 >=
+    percentage
+  );
+}
+
+async function sendAutomodLog(
+  guild: any,
+  settings: any,
+  message: any,
+  rule: string,
+  action: string
+) {
+  if (
+    !settings.automodLogChannelId
+  ) {
+    return;
+  }
+
+  try {
+    const channel =
+      await guild.channels.fetch(
+        settings.automodLogChannelId
+      );
+
+    if (!channel?.isTextBased()) {
+      return;
+    }
+
+    const content =
+      message.content?.slice(
+        0,
+        800
+      ) || "[No content]";
+
+    await channel.send({
+      embeds: [
+        new EmbedBuilder()
+          .setTitle(
+            "AutoMod Action"
+          )
+          .addFields(
+            {
+              name: "Member",
+              value:
+                `<@${message.author.id}>`,
+            },
+            {
+              name: "Channel",
+              value:
+                `<#${message.channelId}>`,
+            },
+            {
+              name: "Rule",
+              value: rule,
+            },
+            {
+              name: "Action",
+              value: action,
+            },
+            {
+              name: "Message",
+              value: content,
+            }
+          )
+          .setTimestamp(),
+      ],
+    });
+  } catch (error) {
+    console.error(
+      "AutoMod logging failed:",
+      error
+    );
+  }
+}
+
+async function executeAutomodAction(
+  message: any,
+  settings: any,
+  reason: string
+) {
+  try {
+    if (message.deletable) {
+      await message.delete();
+    }
+  } catch {}
+
+  let performedAction =
+    "Message deleted";
+
+  if (
+    settings.automodAction ===
+    "warn"
+  ) {
+    try {
+      await db.insert(warnings).values({
+        id: crypto.randomUUID(),
+        guildId: message.guild.id,
+        userId: message.author.id,
+        moderatorId:
+          client.user!.id,
+        reason:
+          `AutoMod: ${reason}`,
+      });
+
+      await db
+        .insert(moderationActions)
+        .values({
+          id: crypto.randomUUID(),
+          guildId:
+            message.guild.id,
+          type: "automod_warn",
+          targetUserId:
+            message.author.id,
+          moderatorId:
+            client.user!.id,
+          reason,
+        });
+
+      performedAction =
+        "Message deleted + warning";
+    } catch (error) {
+      console.error(
+        "AutoMod warning failed:",
+        error
+      );
+    }
+  }
+
+  if (
+    settings.automodAction ===
+    "timeout"
+  ) {
+    try {
+      const member =
+        message.member;
+
+      if (member?.moderatable) {
+        const minutes =
+          settings.automodTimeoutMinutes ||
+          10;
+
+        await member.timeout(
+          minutes * 60_000,
+          `UtilityX AutoMod: ${reason}`
+        );
+
+        await db
+          .insert(moderationActions)
+          .values({
+            id: crypto.randomUUID(),
+            guildId:
+              message.guild.id,
+            type:
+              "automod_timeout",
+            targetUserId:
+              message.author.id,
+            moderatorId:
+              client.user!.id,
+            reason,
+            details:
+              `${minutes} minute(s)`,
+          });
+
+        performedAction =
+          `Message deleted + ${minutes} minute timeout`;
+      }
+    } catch (error) {
+      console.error(
+        "AutoMod timeout failed:",
+        error
+      );
+    }
+  }
+
+  await sendAutomodLog(
+    message.guild,
+    settings,
+    message,
+    reason,
+    performedAction
+  );
+}
+
+async function handleAutomodMessage(
+  message: any
+) {
+  if (
+    !message.guild ||
+    message.author.bot
+  ) {
+    return;
+  }
+
+  const settings =
+    await getGuildSettings(
+      message.guild.id
+    );
+
+  if (
+    !settings?.automodEnabled
+  ) {
+    return;
+  }
+
+  if (
+    settings.automodExemptChannelIds?.includes(
+      message.channelId
+    )
+  ) {
+    return;
+  }
+
+  const member =
+    message.member;
+
+  if (
+    member &&
+    settings.automodExemptRoleIds?.some(
+      (roleId: string) =>
+        member.roles.cache.has(
+          roleId
+        )
+    )
+  ) {
+    return;
+  }
+
+  if (
+    member?.permissions.has(
+      PermissionFlagsBits.Administrator
+    )
+  ) {
+    return;
+  }
+
+  const content =
+    message.content || "";
+
+  if (
+    settings.blockedWords?.length &&
+    containsBlockedWord(
+      content,
+      settings.blockedWords
+    )
+  ) {
+    await executeAutomodAction(
+      message,
+      settings,
+      "Blocked word"
+    );
+
+    return;
+  }
+
+  if (
+    settings.blockInvites &&
+    hasDiscordInvite(content)
+  ) {
+    await executeAutomodAction(
+      message,
+      settings,
+      "Discord invite"
+    );
+
+    return;
+  }
+
+  if (
+    settings.blockLinks &&
+    hasExternalLink(content)
+  ) {
+    await executeAutomodAction(
+      message,
+      settings,
+      "External link"
+    );
+
+    return;
+  }
+
+  const mentionCount =
+    message.mentions.users.size +
+    message.mentions.roles.size;
+
+  if (
+    settings.maxMentions > 0 &&
+    mentionCount >
+      settings.maxMentions
+  ) {
+    await executeAutomodAction(
+      message,
+      settings,
+      `Excessive mentions (${mentionCount})`
+    );
+
+    return;
+  }
+
+  if (
+    settings.capsFilterEnabled &&
+    excessiveCaps(
+      content,
+      settings.capsPercentage
+    )
+  ) {
+    await executeAutomodAction(
+      message,
+      settings,
+      "Excessive capital letters"
+    );
+
+    return;
+  }
+
+  const userKey =
+    `${message.guild.id}:${message.author.id}`;
+
+  if (settings.antiSpamEnabled) {
+    const now = Date.now();
+
+    const interval =
+      settings.spamIntervalSeconds *
+      1000;
+
+    const timestamps =
+      spamTracker.get(userKey) ??
+      [];
+
+    const recent =
+      timestamps.filter(
+        (timestamp) =>
+          now - timestamp <= interval
+      );
+
+    recent.push(now);
+
+    spamTracker.set(
+      userKey,
+      recent
+    );
+
+    if (
+      recent.length >=
+      settings.spamMessageLimit
+    ) {
+      spamTracker.delete(
+        userKey
+      );
+
+      await executeAutomodAction(
+        message,
+        settings,
+        `Spam detected (${recent.length} messages in ${settings.spamIntervalSeconds}s)`
+      );
+
+      return;
+    }
+  }
+
+  if (
+    settings.duplicateMessagesEnabled &&
+    content.trim().length >= 3
+  ) {
+    const normalized =
+      content
+        .trim()
+        .toLowerCase();
+
+    const current =
+      duplicateTracker.get(
+        userKey
+      );
+
+    const now = Date.now();
+
+    if (
+      current &&
+      current.content ===
+        normalized &&
+      now -
+        current.timestamp <
+        30_000
+    ) {
+      const next = {
+        content: normalized,
+        count:
+          current.count + 1,
+        timestamp: now,
+      };
+
+      duplicateTracker.set(
+        userKey,
+        next
+      );
+
+      if (
+        next.count >= 3
+      ) {
+        duplicateTracker.delete(
+          userKey
+        );
+
+        await executeAutomodAction(
+          message,
+          settings,
+          "Repeated messages"
+        );
+
+        return;
+      }
+    } else {
+      duplicateTracker.set(
+        userKey,
+        {
+          content: normalized,
+          count: 1,
+          timestamp: now,
+        }
+      );
+    }
+  }
+}
+
 async function isGuildBanned(guildId: string) {
   const [ban] = await db
     .select()
@@ -1544,6 +2050,22 @@ client.on(
     } catch (error) {
       console.error(
         "GuildMemberUpdate handler failed:",
+        error
+      );
+    }
+  }
+);
+
+client.on(
+  Events.MessageCreate,
+  async (message) => {
+    try {
+      await handleAutomodMessage(
+        message
+      );
+    } catch (error) {
+      console.error(
+        "AutoMod message handler failed:",
         error
       );
     }

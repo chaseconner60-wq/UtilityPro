@@ -12,6 +12,7 @@ type Section =
   | "tickets"
   | "logging"
   | "moderation"
+  | "automod"
   | "automation";
 
 type Guild = {
@@ -95,6 +96,31 @@ type Settings = {
   loggingEnabled: boolean;
   moderationEnabled: boolean;
   automationEnabled: boolean;
+
+  automodEnabled: boolean;
+  automodLogChannelId: string | null;
+
+  antiSpamEnabled: boolean;
+  spamMessageLimit: number;
+  spamIntervalSeconds: number;
+
+  duplicateMessagesEnabled: boolean;
+
+  maxMentions: number;
+
+  capsFilterEnabled: boolean;
+  capsPercentage: number;
+
+  blockedWords: string[];
+
+  blockInvites: boolean;
+  blockLinks: boolean;
+
+  automodAction: string;
+  automodTimeoutMinutes: number;
+
+  automodExemptRoleIds: string[];
+  automodExemptChannelIds: string[];
 };
 
 export default function ServerDashboard({
@@ -297,6 +323,11 @@ export default function ServerDashboard({
       id: "moderation",
       label: "Moderation",
       detail: "Safety tools",
+    },
+    {
+      id: "automod",
+      label: "AutoMod",
+      detail: "Automatic protection",
     },
     {
       id: "automation",
@@ -1248,6 +1279,255 @@ export default function ServerDashboard({
             )}
 
             {section ===
+              "automod" && (
+              <ModulePage
+                eyebrow="Protection"
+                title="AutoMod"
+                description="Automatically detect and stop spam, unwanted links, mass mentions and other disruptive messages."
+              >
+                <SettingToggle
+                  title="AutoMod Engine"
+                  description="Enable UtilityX automatic message protection."
+                  enabled={settings.automodEnabled}
+                  onChange={(enabled) =>
+                    void save({
+                      automodEnabled:
+                        enabled,
+                    })
+                  }
+                />
+
+                <ResourceSelect
+                  title="AutoMod Log Channel"
+                  description="Channel where automatic moderation actions are logged."
+                  value={settings.automodLogChannelId}
+                  options={textChannels}
+                  placeholder="Select AutoMod log channel"
+                  prefix="#"
+                  onChange={(value) =>
+                    void save({
+                      automodLogChannelId:
+                        value,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Anti-Spam"
+                  description="Detect users sending too many messages in a short period."
+                  enabled={settings.antiSpamEnabled}
+                  onChange={(enabled) =>
+                    void save({
+                      antiSpamEnabled:
+                        enabled,
+                    })
+                  }
+                />
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <NumberSetting
+                    title="Spam Message Limit"
+                    description="Number of messages allowed inside the spam window."
+                    value={settings.spamMessageLimit}
+                    min={2}
+                    max={20}
+                    onSave={(value) =>
+                      void save({
+                        spamMessageLimit:
+                          value,
+                      })
+                    }
+                  />
+
+                  <NumberSetting
+                    title="Spam Window"
+                    description="How quickly the message limit must be reached."
+                    value={settings.spamIntervalSeconds}
+                    min={2}
+                    max={60}
+                    suffix="seconds"
+                    onSave={(value) =>
+                      void save({
+                        spamIntervalSeconds:
+                          value,
+                      })
+                    }
+                  />
+                </div>
+
+                <SettingToggle
+                  title="Repeated Messages"
+                  description="Detect the same message being posted repeatedly."
+                  enabled={settings.duplicateMessagesEnabled}
+                  onChange={(enabled) =>
+                    void save({
+                      duplicateMessagesEnabled:
+                        enabled,
+                    })
+                  }
+                />
+
+                <NumberSetting
+                  title="Maximum Mentions"
+                  description="Messages containing more mentions than this will trigger AutoMod."
+                  value={settings.maxMentions}
+                  min={1}
+                  max={50}
+                  onSave={(value) =>
+                    void save({
+                      maxMentions:
+                        value,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Excessive Caps"
+                  description="Detect messages containing excessive capital letters."
+                  enabled={settings.capsFilterEnabled}
+                  onChange={(enabled) =>
+                    void save({
+                      capsFilterEnabled:
+                        enabled,
+                    })
+                  }
+                />
+
+                <NumberSetting
+                  title="Caps Threshold"
+                  description="Percentage of letters that must be uppercase before AutoMod triggers."
+                  value={settings.capsPercentage}
+                  min={50}
+                  max={100}
+                  suffix="%"
+                  onSave={(value) =>
+                    void save({
+                      capsPercentage:
+                        value,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Block Discord Invites"
+                  description="Delete Discord invite links posted by non-exempt members."
+                  enabled={settings.blockInvites}
+                  onChange={(enabled) =>
+                    void save({
+                      blockInvites:
+                        enabled,
+                    })
+                  }
+                />
+
+                <SettingToggle
+                  title="Block External Links"
+                  description="Delete normal website links posted by non-exempt members."
+                  enabled={settings.blockLinks}
+                  onChange={(enabled) =>
+                    void save({
+                      blockLinks:
+                        enabled,
+                    })
+                  }
+                />
+
+                <StringListEditor
+                  title="Blocked Words"
+                  description="Messages containing these words will trigger AutoMod."
+                  values={settings.blockedWords ?? []}
+                  onSave={(values) =>
+                    void save({
+                      blockedWords:
+                        values,
+                    })
+                  }
+                />
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+                  <h3 className="font-semibold">
+                    AutoMod Action
+                  </h3>
+
+                  <p className="mt-1 text-sm text-zinc-500">
+                    UtilityX always removes the violating message. Choose the additional punishment.
+                  </p>
+
+                  <select
+                    value={settings.automodAction}
+                    onChange={(event) =>
+                      void save({
+                        automodAction:
+                          event.target.value,
+                      })
+                    }
+                    className="mt-4 w-full rounded-xl border border-white/10 bg-[#0d0e12] px-4 py-3 text-sm outline-none"
+                  >
+                    <option value="delete">
+                      Delete only
+                    </option>
+
+                    <option value="warn">
+                      Delete + warning
+                    </option>
+
+                    <option value="timeout">
+                      Delete + timeout
+                    </option>
+                  </select>
+                </div>
+
+                {settings.automodAction ===
+                  "timeout" && (
+                  <NumberSetting
+                    title="AutoMod Timeout"
+                    description="Timeout duration when AutoMod punishment is set to timeout."
+                    value={settings.automodTimeoutMinutes}
+                    min={1}
+                    max={10080}
+                    suffix="minutes"
+                    onSave={(value) =>
+                      void save({
+                        automodTimeoutMinutes:
+                          value,
+                      })
+                    }
+                  />
+                )}
+
+                <MultiResourceSelect
+                  title="Exempt Roles"
+                  description="Members with these roles bypass UtilityX AutoMod."
+                  values={settings.automodExemptRoleIds ?? []}
+                  options={selectableRoles}
+                  limit={25}
+                  prefix="@"
+                  onChange={(values) =>
+                    void save({
+                      automodExemptRoleIds:
+                        values,
+                    })
+                  }
+                />
+
+                <MultiResourceSelect
+                  title="Exempt Channels"
+                  description="AutoMod will not inspect messages in these channels."
+                  values={settings.automodExemptChannelIds ?? []}
+                  options={textChannels}
+                  limit={25}
+                  prefix="#"
+                  onChange={(values) =>
+                    void save({
+                      automodExemptChannelIds:
+                        values,
+                    })
+                  }
+                />
+              </ModulePage>
+            )}
+
+            {section ===
               "automation" && (
               <ModulePage
                 eyebrow="Automation"
@@ -1409,6 +1689,268 @@ function MessageEditor({
           Save Message
         </button>
       </div>
+    </div>
+  );
+}
+
+function NumberSetting({
+  title,
+  description,
+  value,
+  min,
+  max,
+  suffix,
+  onSave,
+}: {
+  title: string;
+  description: string;
+  value: number;
+  min: number;
+  max: number;
+  suffix?: string;
+  onSave: (value: number) => void;
+}) {
+  const [draft, setDraft] =
+    useState(value);
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+      <h3 className="font-semibold">
+        {title}
+      </h3>
+
+      <p className="mt-1 text-sm text-zinc-500">
+        {description}
+      </p>
+
+      <div className="mt-4 flex items-center gap-3">
+        <input
+          type="number"
+          min={min}
+          max={max}
+          value={draft}
+          onChange={(event) =>
+            setDraft(
+              Number(
+                event.target.value
+              )
+            )
+          }
+          className="w-32 rounded-xl border border-white/10 bg-black/30 px-4 py-3 outline-none focus:border-indigo-500"
+        />
+
+        {suffix && (
+          <span className="text-sm text-zinc-500">
+            {suffix}
+          </span>
+        )}
+
+        <button
+          onClick={() =>
+            onSave(
+              Math.min(
+                max,
+                Math.max(
+                  min,
+                  draft
+                )
+              )
+            )
+          }
+          className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-zinc-200"
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function StringListEditor({
+  title,
+  description,
+  values,
+  onSave,
+}: {
+  title: string;
+  description: string;
+  values: string[];
+  onSave: (values: string[]) => void;
+}) {
+  const [draft, setDraft] =
+    useState(
+      values.join("\n")
+    );
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+      <h3 className="font-semibold">
+        {title}
+      </h3>
+
+      <p className="mt-1 text-sm text-zinc-500">
+        {description}
+      </p>
+
+      <textarea
+        rows={6}
+        value={draft}
+        onChange={(event) =>
+          setDraft(
+            event.target.value
+          )
+        }
+        placeholder={"word1\nword2\nword3"}
+        className="mt-4 w-full resize-none rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-indigo-500"
+      />
+
+      <div className="mt-3 flex justify-between text-xs text-zinc-600">
+        <span>
+          One entry per line
+        </span>
+
+        <button
+          onClick={() =>
+            onSave(
+              [
+                ...new Set(
+                  draft
+                    .split("\n")
+                    .map(
+                      (item) =>
+                        item.trim()
+                    )
+                    .filter(Boolean)
+                ),
+              ].slice(0, 100)
+            )
+          }
+          className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-zinc-200"
+        >
+          Save List
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MultiResourceSelect({
+  title,
+  description,
+  values,
+  options,
+  limit,
+  prefix,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  values: string[];
+  options: {
+    id: string;
+    name: string;
+  }[];
+  limit: number;
+  prefix: string;
+  onChange: (values: string[]) => void;
+}) {
+  const available =
+    options.filter(
+      (option) =>
+        !values.includes(
+          option.id
+        )
+    );
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="font-semibold">
+            {title}
+          </h3>
+
+          <p className="mt-1 text-sm text-zinc-500">
+            {description}
+          </p>
+        </div>
+
+        <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-xs text-indigo-300">
+          {values.length}/{limit}
+        </span>
+      </div>
+
+      {!!values.length && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {values.map(
+            (id) => {
+              const option =
+                options.find(
+                  (entry) =>
+                    entry.id === id
+                );
+
+              return (
+                <button
+                  key={id}
+                  onClick={() =>
+                    onChange(
+                      values.filter(
+                        (value) =>
+                          value !== id
+                      )
+                    )
+                  }
+                  className="rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-200"
+                >
+                  {prefix}
+                  {option?.name ??
+                    "Unknown"} ×
+                </button>
+              );
+            }
+          )}
+        </div>
+      )}
+
+      <select
+        value=""
+        disabled={
+          values.length >= limit
+        }
+        onChange={(event) => {
+          const value =
+            event.target.value;
+
+          if (
+            value &&
+            values.length <
+              limit
+          ) {
+            onChange([
+              ...values,
+              value,
+            ]);
+          }
+        }}
+        className="mt-4 w-full rounded-xl border border-white/10 bg-[#0d0e12] px-4 py-3 text-sm outline-none disabled:opacity-40"
+      >
+        <option value="">
+          Add exemption...
+        </option>
+
+        {available.map(
+          (option) => (
+            <option
+              key={option.id}
+              value={option.id}
+            >
+              {prefix}
+              {option.name}
+            </option>
+          )
+        )}
+      </select>
     </div>
   );
 }

@@ -71,6 +71,13 @@
       "when": 1791414919581,
       "tag": "0009_aspiring_chamber",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791465524885,
+      "tag": "0010_normal_captain_marvel",
+      "breakpoints": true
     }
   ]
 }

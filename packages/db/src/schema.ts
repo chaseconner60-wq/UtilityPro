@@ -209,6 +209,71 @@ export const guildSettings = pgTable("guild_settings", {
     .notNull()
     .default(false),
 
+  automodEnabled: boolean("automod_enabled")
+    .notNull()
+    .default(false),
+
+  automodLogChannelId: text("automod_log_channel_id"),
+
+  antiSpamEnabled: boolean("anti_spam_enabled")
+    .notNull()
+    .default(true),
+
+  spamMessageLimit: integer("spam_message_limit")
+    .notNull()
+    .default(5),
+
+  spamIntervalSeconds: integer("spam_interval_seconds")
+    .notNull()
+    .default(5),
+
+  duplicateMessagesEnabled: boolean("duplicate_messages_enabled")
+    .notNull()
+    .default(true),
+
+  maxMentions: integer("max_mentions")
+    .notNull()
+    .default(5),
+
+  capsFilterEnabled: boolean("caps_filter_enabled")
+    .notNull()
+    .default(false),
+
+  capsPercentage: integer("caps_percentage")
+    .notNull()
+    .default(75),
+
+  blockedWords: jsonb("blocked_words")
+    .$type<string[]>()
+    .notNull()
+    .default([]),
+
+  blockInvites: boolean("block_invites")
+    .notNull()
+    .default(false),
+
+  blockLinks: boolean("block_links")
+    .notNull()
+    .default(false),
+
+  automodAction: text("automod_action")
+    .notNull()
+    .default("delete"),
+
+  automodTimeoutMinutes: integer("automod_timeout_minutes")
+    .notNull()
+    .default(10),
+
+  automodExemptRoleIds: jsonb("automod_exempt_role_ids")
+    .$type<string[]>()
+    .notNull()
+    .default([]),
+
+  automodExemptChannelIds: jsonb("automod_exempt_channel_ids")
+    .$type<string[]>()
+    .notNull()
+    .default([]),
+
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
