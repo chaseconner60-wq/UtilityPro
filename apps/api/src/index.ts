@@ -507,6 +507,31 @@ app.patch<{
     logMemberEvents?: boolean;
     logMessageDeletes?: boolean;
     logRoleChanges?: boolean;
+
+    automodEnabled?: boolean;
+    automodLogChannelId?: string | null;
+
+    antiSpamEnabled?: boolean;
+    spamMessageLimit?: number;
+    spamIntervalSeconds?: number;
+
+    duplicateMessagesEnabled?: boolean;
+
+    maxMentions?: number;
+
+    capsFilterEnabled?: boolean;
+    capsPercentage?: number;
+
+    blockedWords?: string[];
+
+    blockInvites?: boolean;
+    blockLinks?: boolean;
+
+    automodAction?: string;
+    automodTimeoutMinutes?: number;
+
+    automodExemptRoleIds?: string[];
+    automodExemptChannelIds?: string[];
   };
 }>(
   "/internal/guild-settings/:guildId",
@@ -719,6 +744,152 @@ app.patch<{
         logRoleChanges:
           body.logRoleChanges ??
           current.logRoleChanges,
+
+        automodEnabled:
+          body.automodEnabled ??
+          current.automodEnabled,
+
+        automodLogChannelId:
+          body.automodLogChannelId !== undefined
+            ? body.automodLogChannelId
+            : current.automodLogChannelId,
+
+        antiSpamEnabled:
+          body.antiSpamEnabled ??
+          current.antiSpamEnabled,
+
+        spamMessageLimit:
+          body.spamMessageLimit !== undefined
+            ? Math.min(
+                20,
+                Math.max(
+                  2,
+                  body.spamMessageLimit
+                )
+              )
+            : current.spamMessageLimit,
+
+        spamIntervalSeconds:
+          body.spamIntervalSeconds !== undefined
+            ? Math.min(
+                60,
+                Math.max(
+                  2,
+                  body.spamIntervalSeconds
+                )
+              )
+            : current.spamIntervalSeconds,
+
+        duplicateMessagesEnabled:
+          body.duplicateMessagesEnabled ??
+          current.duplicateMessagesEnabled,
+
+        maxMentions:
+          body.maxMentions !== undefined
+            ? Math.min(
+                50,
+                Math.max(
+                  1,
+                  body.maxMentions
+                )
+              )
+            : current.maxMentions,
+
+        capsFilterEnabled:
+          body.capsFilterEnabled ??
+          current.capsFilterEnabled,
+
+        capsPercentage:
+          body.capsPercentage !== undefined
+            ? Math.min(
+                100,
+                Math.max(
+                  50,
+                  body.capsPercentage
+                )
+              )
+            : current.capsPercentage,
+
+        blockedWords:
+          Array.isArray(
+            body.blockedWords
+          )
+            ? [
+                ...new Set(
+                  body.blockedWords
+                    .filter(
+                      (word) =>
+                        typeof word ===
+                        "string"
+                    )
+                    .map(
+                      (word) =>
+                        word.trim()
+                    )
+                    .filter(Boolean)
+                ),
+              ].slice(0, 100)
+            : current.blockedWords,
+
+        blockInvites:
+          body.blockInvites ??
+          current.blockInvites,
+
+        blockLinks:
+          body.blockLinks ??
+          current.blockLinks,
+
+        automodAction:
+          [
+            "delete",
+            "warn",
+            "timeout",
+          ].includes(
+            body.automodAction ?? ""
+          )
+            ? body.automodAction!
+            : current.automodAction,
+
+        automodTimeoutMinutes:
+          body.automodTimeoutMinutes !== undefined
+            ? Math.min(
+                10080,
+                Math.max(
+                  1,
+                  body.automodTimeoutMinutes
+                )
+              )
+            : current.automodTimeoutMinutes,
+
+        automodExemptRoleIds:
+          Array.isArray(
+            body.automodExemptRoleIds
+          )
+            ? [
+                ...new Set(
+                  body.automodExemptRoleIds.filter(
+                    (id) =>
+                      typeof id ===
+                      "string"
+                  )
+                ),
+              ].slice(0, 25)
+            : current.automodExemptRoleIds,
+
+        automodExemptChannelIds:
+          Array.isArray(
+            body.automodExemptChannelIds
+          )
+            ? [
+                ...new Set(
+                  body.automodExemptChannelIds.filter(
+                    (id) =>
+                      typeof id ===
+                      "string"
+                  )
+                ),
+              ].slice(0, 25)
+            : current.automodExemptChannelIds,
 
         updatedAt: new Date(),
       })
