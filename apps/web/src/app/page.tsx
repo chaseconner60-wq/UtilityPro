@@ -15,7 +15,7 @@ export default function Home() {
           </a>
 
           <a
-            href="/login"
+            href="/dashboard"
             className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200"
           >
             Dashboard
@@ -40,7 +40,7 @@ export default function Home() {
 
         <div className="mt-10 flex flex-col gap-3 sm:flex-row">
           <a
-            href="/login"
+            href="/dashboard"
             className="rounded-xl bg-indigo-500 px-6 py-3 font-semibold transition hover:bg-indigo-400"
           >
             Open Dashboard
