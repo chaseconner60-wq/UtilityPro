@@ -762,29 +762,13 @@ export default function ServerDashboard({
                 title="Welcome & Goodbye"
                 description="Configure messages shown when members join or leave your community."
               >
-                <ResourceSelect
-                  title="Welcome Channel"
-                  description="Channel where UtilityX sends welcome messages."
-                  value={settings.welcomeChannelId}
-                  options={textChannels}
-                  placeholder="Select a welcome channel"
-                  prefix="#"
-                  onChange={(value) =>
-                    void save({
-                      welcomeChannelId: value,
-                    })
-                  }
-                />
-
                 <SettingToggle
                   title="Welcome Messages"
                   description="Enable UtilityX welcome messages."
                   enabled={
                     settings.welcomeEnabled
                   }
-                  onChange={(
-                    enabled
-                  ) =>
+                  onChange={(enabled) =>
                     void save({
                       welcomeEnabled:
                         enabled,
@@ -792,49 +776,57 @@ export default function ServerDashboard({
                   }
                 />
 
-                <MessageEditor
-                  title="Welcome Message"
-                  value={
-                    settings.welcomeMessage
-                  }
-                  disabled={
-                    !settings.welcomeEnabled
-                  }
-                  onSave={(value) =>
-                    void save({
-                      welcomeMessage:
-                        value,
-                    })
-                  }
-                />
-
-                <SettingToggle
-                  title="Welcome Embed"
-                  description="Send the welcome message as a styled UtilityX embed instead of plain text."
+                <ModuleCollapse
                   enabled={
-                    settings.welcomeUseEmbed
+                    settings.welcomeEnabled
                   }
-                  onChange={(enabled) =>
-                    void save({
-                      welcomeUseEmbed:
-                        enabled,
-                    })
-                  }
-                />
+                  disabledMessage="Enable Welcome Messages to configure welcome settings."
+                >
+                  <ResourceSelect
+                    title="Welcome Channel"
+                    description="Channel where UtilityX sends welcome messages."
+                    value={
+                      settings.welcomeChannelId
+                    }
+                    options={textChannels}
+                    placeholder="Select a welcome channel"
+                    prefix="#"
+                    onChange={(value) =>
+                      void save({
+                        welcomeChannelId:
+                          value,
+                      })
+                    }
+                  />
 
-                <ResourceSelect
-                  title="Goodbye Channel"
-                  description="Channel where UtilityX sends goodbye messages."
-                  value={settings.goodbyeChannelId}
-                  options={textChannels}
-                  placeholder="Select a goodbye channel"
-                  prefix="#"
-                  onChange={(value) =>
-                    void save({
-                      goodbyeChannelId: value,
-                    })
-                  }
-                />
+                  <MessageEditor
+                    title="Welcome Message"
+                    value={
+                      settings.welcomeMessage
+                    }
+                    disabled={false}
+                    onSave={(value) =>
+                      void save({
+                        welcomeMessage:
+                          value,
+                      })
+                    }
+                  />
+
+                  <SettingToggle
+                    title="Welcome Embed"
+                    description="Send the welcome message as a styled UtilityX embed instead of plain text."
+                    enabled={
+                      settings.welcomeUseEmbed
+                    }
+                    onChange={(enabled) =>
+                      void save({
+                        welcomeUseEmbed:
+                          enabled,
+                      })
+                    }
+                  />
+                </ModuleCollapse>
 
                 <SettingToggle
                   title="Goodbye Messages"
@@ -842,9 +834,7 @@ export default function ServerDashboard({
                   enabled={
                     settings.goodbyeEnabled
                   }
-                  onChange={(
-                    enabled
-                  ) =>
+                  onChange={(enabled) =>
                     void save({
                       goodbyeEnabled:
                         enabled,
@@ -852,49 +842,64 @@ export default function ServerDashboard({
                   }
                 />
 
-                <MessageEditor
-                  title="Goodbye Message"
-                  value={
-                    settings.goodbyeMessage
-                  }
-                  disabled={
-                    !settings.goodbyeEnabled
-                  }
-                  onSave={(value) =>
-                    void save({
-                      goodbyeMessage:
-                        value,
-                    })
-                  }
-                />
-
-                <SettingToggle
-                  title="Goodbye Embed"
-                  description="Send goodbye messages as a styled UtilityX embed."
+                <ModuleCollapse
                   enabled={
-                    settings.goodbyeUseEmbed
+                    settings.goodbyeEnabled
                   }
-                  onChange={(enabled) =>
-                    void save({
-                      goodbyeUseEmbed:
-                        enabled,
-                    })
-                  }
-                />
+                  disabledMessage="Enable Goodbye Messages to configure goodbye settings."
+                >
+                  <ResourceSelect
+                    title="Goodbye Channel"
+                    description="Channel where UtilityX sends goodbye messages."
+                    value={
+                      settings.goodbyeChannelId
+                    }
+                    options={textChannels}
+                    placeholder="Select a goodbye channel"
+                    prefix="#"
+                    onChange={(value) =>
+                      void save({
+                        goodbyeChannelId:
+                          value,
+                      })
+                    }
+                  />
 
-                <div className="rounded-xl border border-indigo-500/10 bg-indigo-500/5 p-4 text-sm text-indigo-200">
-                  Variables supported:
-                  {" "}
-                  <code>
-                    {"{user}"}
-                  </code>
-                  {" "}
-                  and
-                  {" "}
-                  <code>
-                    {"{server}"}
-                  </code>
-                </div>
+                  <MessageEditor
+                    title="Goodbye Message"
+                    value={
+                      settings.goodbyeMessage
+                    }
+                    disabled={false}
+                    onSave={(value) =>
+                      void save({
+                        goodbyeMessage:
+                          value,
+                      })
+                    }
+                  />
+
+                  <SettingToggle
+                    title="Goodbye Embed"
+                    description="Send goodbye messages as a styled UtilityX embed."
+                    enabled={
+                      settings.goodbyeUseEmbed
+                    }
+                    onChange={(enabled) =>
+                      void save({
+                        goodbyeUseEmbed:
+                          enabled,
+                      })
+                    }
+                  />
+
+                  <div className="rounded-xl border border-indigo-500/10 bg-indigo-500/5 p-4 text-sm text-indigo-200">
+                    Variables supported:{" "}
+                    <code>{"{user}"}</code>
+                    {" "}and{" "}
+                    <code>{"{server}"}</code>
+                  </div>
+                </ModuleCollapse>
               </ModulePage>
             )}
 
@@ -915,6 +920,13 @@ export default function ServerDashboard({
                     })
                   }
                 />
+
+                <ModuleCollapse
+                  enabled={
+                    settings.ticketsEnabled
+                  }
+                  disabledMessage="Enable the Ticket System to configure ticket settings."
+                >
 
                 <ResourceSelect
                   title="Ticket Panel Channel"
@@ -1060,6 +1072,7 @@ export default function ServerDashboard({
                   {" "}and{" "}
                   <code>{"{id}"}</code>.
                 </div>
+                </ModuleCollapse>
               </ModulePage>
             )}
 
@@ -1070,20 +1083,6 @@ export default function ServerDashboard({
                 title="Logging"
                 description="Track important Discord and UtilityX activity."
               >
-                <ResourceSelect
-                  title="Logging Channel"
-                  description="Channel where UtilityX sends audit and moderation logs."
-                  value={settings.loggingChannelId}
-                  options={textChannels}
-                  placeholder="Select logging channel"
-                  prefix="#"
-                  onChange={(value) =>
-                    void save({
-                      loggingChannelId: value,
-                    })
-                  }
-                />
-
                 <SettingToggle
                   title="Server Logging"
                   description="Enable UtilityX event logging for this server."
@@ -1099,6 +1098,29 @@ export default function ServerDashboard({
                     })
                   }
                 />
+
+                <ModuleCollapse
+                  enabled={
+                    settings.loggingEnabled
+                  }
+                  disabledMessage="Enable Server Logging to configure logging settings."
+                >
+                  <ResourceSelect
+                    title="Logging Channel"
+                    description="Channel where UtilityX sends audit and moderation logs."
+                    value={
+                      settings.loggingChannelId
+                    }
+                    options={textChannels}
+                    placeholder="Select logging channel"
+                    prefix="#"
+                    onChange={(value) =>
+                      void save({
+                        loggingChannelId:
+                          value,
+                      })
+                    }
+                  />
 
                 <SettingToggle
                   title="Member Events"
@@ -1141,7 +1163,7 @@ export default function ServerDashboard({
                     })
                   }
                 />
-
+                </ModuleCollapse>
               </ModulePage>
             )}
 
@@ -1163,6 +1185,13 @@ export default function ServerDashboard({
                     })
                   }
                 />
+
+                <ModuleCollapse
+                  enabled={
+                    settings.moderationEnabled
+                  }
+                  disabledMessage="Enable Moderation Tools to configure moderation settings."
+                >
 
                 <ResourceSelect
                   title="Staff Role"
@@ -1352,6 +1381,7 @@ export default function ServerDashboard({
                     )}
                   </div>
                 </div>
+                </ModuleCollapse>
               </ModulePage>
             )}
 
@@ -1362,44 +1392,50 @@ export default function ServerDashboard({
                 title="AutoMod"
                 description="Automatically detect spam, unwanted content and disruptive messages before they become a problem."
               >
-                <SettingsGroup
-                  eyebrow="Status"
-                  title="Protection"
-                  description="Control the AutoMod engine and where enforcement activity is recorded."
-                >
-                  <SettingToggle
-                    title="AutoMod Engine"
-                    description="Enable UtilityX automatic message protection."
-                    enabled={
-                      settings.automodEnabled
-                    }
-                    onChange={(enabled) =>
-                      void save({
-                        automodEnabled:
-                          enabled,
-                      })
-                    }
-                  />
+                <SettingToggle
+                  title="AutoMod Engine"
+                  description="Enable UtilityX automatic message protection."
+                  enabled={
+                    settings.automodEnabled
+                  }
+                  onChange={(enabled) =>
+                    void save({
+                      automodEnabled:
+                        enabled,
+                    })
+                  }
+                />
 
-                  <ResourceSelect
-                    title="AutoMod Log Channel"
-                    description="Channel where automatic moderation actions are logged."
-                    value={
-                      settings.automodLogChannelId
-                    }
-                    options={
-                      textChannels
-                    }
-                    placeholder="Select AutoMod log channel"
-                    prefix="#"
-                    onChange={(value) =>
-                      void save({
-                        automodLogChannelId:
-                          value,
-                      })
-                    }
-                  />
-                </SettingsGroup>
+                <ModuleCollapse
+                  enabled={
+                    settings.automodEnabled
+                  }
+                  disabledMessage="Enable AutoMod to configure automatic protection."
+                >
+                  <SettingsGroup
+                    eyebrow="Status"
+                    title="Protection"
+                    description="Control where AutoMod enforcement activity is recorded."
+                  >
+                    <ResourceSelect
+                      title="AutoMod Log Channel"
+                      description="Channel where automatic moderation actions are logged."
+                      value={
+                        settings.automodLogChannelId
+                      }
+                      options={
+                        textChannels
+                      }
+                      placeholder="Select AutoMod log channel"
+                      prefix="#"
+                      onChange={(value) =>
+                        void save({
+                          automodLogChannelId:
+                            value,
+                        })
+                      }
+                    />
+                  </SettingsGroup>
 
                 <SettingsGroup
                   eyebrow="Spam"
@@ -1680,6 +1716,7 @@ export default function ServerDashboard({
                     />
                   </div>
                 </SettingsGroup>
+                </ModuleCollapse>
               </ModulePage>
             )}
 
@@ -1690,23 +1727,26 @@ export default function ServerDashboard({
                 title="Automation"
                 description="Automate repetitive server tasks and member workflows."
               >
-                <div className="grid gap-3 xl:grid-cols-2">
-                  <div className="xl:col-span-2">
-                    <SettingToggle
-                      title="Automation Engine"
-                      description="Enable UtilityX server automation features."
-                      enabled={
-                        settings.automationEnabled
-                      }
-                      onChange={(enabled) =>
-                        void save({
-                          automationEnabled:
-                            enabled,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
+                <SettingToggle
+                  title="Automation Engine"
+                  description="Enable UtilityX server automation features."
+                  enabled={
+                    settings.automationEnabled
+                  }
+                  onChange={(enabled) =>
+                    void save({
+                      automationEnabled:
+                        enabled,
+                    })
+                  }
+                />
+
+                <ModuleCollapse
+                  enabled={
+                    settings.automationEnabled
+                  }
+                  disabledMessage="Enable Automation to configure automatic actions."
+                >
 
                 <SettingsGroup
                   eyebrow="Members"
@@ -1771,6 +1811,7 @@ export default function ServerDashboard({
                     />
                   </div>
                 </SettingsGroup>
+                </ModuleCollapse>
               </ModulePage>
             )}
 
@@ -1817,6 +1858,46 @@ function ModulePage({
         {children}
       </div>
     </>
+  );
+}
+
+function ModuleCollapse({
+  enabled,
+  disabledMessage,
+  children,
+}: {
+  enabled: boolean;
+  disabledMessage: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div
+        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+          enabled
+            ? "grid-rows-[1fr] opacity-100"
+            : "grid-rows-[0fr] opacity-0"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-3 pt-3">
+            {children}
+          </div>
+        </div>
+      </div>
+
+      {!enabled && (
+        <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-xs text-zinc-600">
+            —
+          </div>
+
+          <p className="text-xs text-zinc-600">
+            {disabledMessage}
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 
