@@ -289,50 +289,82 @@ export default function ServerDashboard({
     }
   }
 
-  const navigation: {
-    id: Section;
+  const navigationGroups: {
     label: string;
-    detail: string;
+    items: {
+      id: Section;
+      label: string;
+      detail: string;
+      icon: string;
+    }[];
   }[] = [
     {
-      id: "overview",
-      label: "Overview",
-      detail: "Server status",
+      label: "Server",
+      items: [
+        {
+          id: "overview",
+          label: "Overview",
+          detail: "Server status",
+          icon: "◫",
+        },
+        {
+          id: "general",
+          label: "Server Settings",
+          detail: "Core configuration",
+          icon: "⚙",
+        },
+      ],
     },
     {
-      id: "general",
-      label: "Server Settings",
-      detail: "Core configuration",
+      label: "Community",
+      items: [
+        {
+          id: "welcome",
+          label: "Welcome & Goodbye",
+          detail: "Member experience",
+          icon: "✦",
+        },
+        {
+          id: "tickets",
+          label: "Tickets",
+          detail: "Support system",
+          icon: "◌",
+        },
+        {
+          id: "logging",
+          label: "Logging",
+          detail: "Server activity",
+          icon: "≡",
+        },
+      ],
     },
     {
-      id: "welcome",
-      label: "Welcome & Goodbye",
-      detail: "Member messages",
+      label: "Safety",
+      items: [
+        {
+          id: "moderation",
+          label: "Moderation",
+          detail: "Staff tools",
+          icon: "◇",
+        },
+        {
+          id: "automod",
+          label: "AutoMod",
+          detail: "Automatic protection",
+          icon: "◆",
+        },
+      ],
     },
     {
-      id: "tickets",
-      label: "Tickets",
-      detail: "Support system",
-    },
-    {
-      id: "logging",
-      label: "Logging",
-      detail: "Server activity",
-    },
-    {
-      id: "moderation",
-      label: "Moderation",
-      detail: "Safety tools",
-    },
-    {
-      id: "automod",
-      label: "AutoMod",
-      detail: "Automatic protection",
-    },
-    {
-      id: "automation",
-      label: "Automation",
-      detail: "Automatic actions",
+      label: "Advanced",
+      items: [
+        {
+          id: "automation",
+          label: "Automation",
+          detail: "Workflows & actions",
+          icon: "⌁",
+        },
+      ],
     },
   ];
 
@@ -391,6 +423,11 @@ export default function ServerDashboard({
         settings.moderationEnabled,
     },
     {
+      name: "AutoMod",
+      enabled:
+        settings.automodEnabled,
+    },
+    {
       name: "Automation",
       enabled:
         settings.automationEnabled,
@@ -398,35 +435,45 @@ export default function ServerDashboard({
   ];
 
   return (
-    <main className="min-h-screen bg-[#07080b] text-white">
-      <div className="flex min-h-screen">
-        <aside className="hidden w-72 shrink-0 border-r border-white/10 bg-[#0b0c10] lg:flex lg:flex-col">
-          <div className="border-b border-white/10 px-6 py-6">
+    <main className="relative min-h-screen overflow-hidden bg-[#07080b] text-white">
+      <div className="pointer-events-none fixed inset-0">
+        <div className="absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-indigo-600/10 blur-[120px]" />
+        <div className="absolute right-[-180px] top-[30%] h-[440px] w-[440px] rounded-full bg-violet-500/[0.07] blur-[120px]" />
+      </div>
+
+      <div className="relative flex min-h-screen">
+        <aside className="hidden w-[270px] shrink-0 border-r border-white/[0.07] bg-[#090a0e]/95 backdrop-blur-xl lg:flex lg:flex-col">
+          <div className="px-5 pb-5 pt-6">
             <a
               href="/dashboard"
-              className="text-2xl font-bold tracking-tight"
+              className="inline-flex items-center gap-2"
             >
-              Utility
-              <span className="text-indigo-400">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-black shadow-lg shadow-indigo-500/20">
                 X
-              </span>
-            </a>
+              </div>
 
-            <p className="mt-1 text-xs text-zinc-500">
-              Server Management
-            </p>
+              <div>
+                <div className="text-lg font-bold tracking-tight">
+                  UtilityX
+                </div>
+
+                <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-600">
+                  Control Center
+                </div>
+              </div>
+            </a>
           </div>
 
-          <div className="border-b border-white/10 p-4">
-            <div className="flex items-center gap-3 rounded-2xl bg-white/[0.035] p-4">
+          <div className="px-3">
+            <div className="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.035] p-3">
               {iconUrl ? (
                 <img
                   src={iconUrl}
                   alt=""
-                  className="h-12 w-12 rounded-xl object-cover"
+                  className="h-10 w-10 rounded-xl object-cover ring-1 ring-white/10"
                 />
               ) : (
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/10 font-bold text-indigo-300">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 font-bold text-indigo-300 ring-1 ring-indigo-500/20">
                   {guildName
                     .charAt(0)
                     .toUpperCase()}
@@ -434,11 +481,11 @@ export default function ServerDashboard({
               )}
 
               <div className="min-w-0">
-                <p className="truncate font-semibold">
+                <p className="truncate text-sm font-semibold text-zinc-100">
                   {guildName}
                 </p>
 
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-0.5 text-[11px] text-zinc-600">
                   {owner
                     ? "Server Owner"
                     : "Server Manager"}
@@ -447,39 +494,84 @@ export default function ServerDashboard({
             </div>
           </div>
 
-          <nav className="flex-1 space-y-1 p-4">
-            {navigation.map((item) => {
-              const active =
-                section === item.id;
-
-              return (
-                <button
-                  key={item.id}
-                  onClick={() =>
-                    setSection(item.id)
-                  }
-                  className={`w-full rounded-xl px-4 py-3 text-left transition ${
-                    active
-                      ? "bg-indigo-500/15 text-white"
-                      : "text-zinc-400 hover:bg-white/5 hover:text-white"
-                  }`}
+          <nav className="mt-5 flex-1 overflow-y-auto px-3 pb-5">
+            {navigationGroups.map(
+              (group) => (
+                <div
+                  key={group.label}
+                  className="mb-5"
                 >
-                  <div className="text-sm font-semibold">
-                    {item.label}
-                  </div>
+                  <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-700">
+                    {group.label}
+                  </p>
 
-                  <div className="mt-0.5 text-xs text-zinc-600">
-                    {item.detail}
+                  <div className="space-y-1">
+                    {group.items.map(
+                      (item) => {
+                        const active =
+                          section ===
+                          item.id;
+
+                        return (
+                          <button
+                            key={
+                              item.id
+                            }
+                            type="button"
+                            onClick={() =>
+                              setSection(
+                                item.id
+                              )
+                            }
+                            className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                              active
+                                ? "bg-indigo-500/12 text-white shadow-inner shadow-indigo-500/[0.06]"
+                                : "text-zinc-500 hover:bg-white/[0.035] hover:text-zinc-200"
+                            }`}
+                          >
+                            <span
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm transition ${
+                                active
+                                  ? "bg-indigo-500/15 text-indigo-300"
+                                  : "bg-white/[0.035] text-zinc-600 group-hover:text-zinc-300"
+                              }`}
+                            >
+                              {
+                                item.icon
+                              }
+                            </span>
+
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-medium">
+                                {
+                                  item.label
+                                }
+                              </span>
+
+                              <span className="mt-0.5 block truncate text-[11px] text-zinc-700">
+                                {
+                                  item.detail
+                                }
+                              </span>
+                            </span>
+
+                            {active && (
+                              <span className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-400 shadow-[0_0_10px_rgba(129,140,248,.8)]" />
+                            )}
+                          </button>
+                        );
+                      }
+                    )}
                   </div>
-                </button>
-              );
-            })}
+                </div>
+              )
+            )}
           </nav>
 
-          <div className="border-t border-white/10 p-4">
+          <div className="border-t border-white/[0.07] p-3">
             <a
               href="/dashboard"
-              className="block rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-sm text-zinc-300 hover:bg-white/[0.06]"
+              className="flex items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-2.5 text-xs font-medium text-zinc-400 transition hover:bg-white/[0.055] hover:text-white"
             >
               Change Server
             </a>
@@ -487,35 +579,67 @@ export default function ServerDashboard({
         </aside>
 
         <div className="min-w-0 flex-1">
-          <header className="border-b border-white/10">
-            <div className="flex items-center justify-between px-6 py-5 lg:px-10">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-indigo-400">
-                  UtilityX Server
-                </p>
+          <div className="border-b border-white/[0.07] bg-[#090a0e]/80 px-4 py-3 backdrop-blur-xl lg:hidden">
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {navigationGroups
+                .flatMap(
+                  (group) =>
+                    group.items
+                )
+                .map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() =>
+                      setSection(
+                        item.id
+                      )
+                    }
+                    className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${
+                      section ===
+                      item.id
+                        ? "bg-indigo-500 text-white"
+                        : "bg-white/[0.04] text-zinc-500"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+            </div>
+          </div>
+          <header className="sticky top-0 z-20 border-b border-white/[0.07] bg-[#07080b]/80 backdrop-blur-xl">
+            <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-5 py-4 lg:px-8">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.55)]" />
 
-                <h1 className="mt-1 text-xl font-bold">
+                  <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-600">
+                    UtilityX connected
+                  </p>
+                </div>
+
+                <h1 className="mt-1 truncate text-lg font-semibold tracking-tight text-zinc-100">
                   {guildName}
                 </h1>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex shrink-0 items-center gap-2">
                 {saving && (
-                  <span className="text-sm text-zinc-500">
+                  <span className="rounded-full border border-white/[0.07] bg-white/[0.035] px-3 py-1.5 text-xs text-zinc-500">
                     Saving...
                   </span>
                 )}
 
-                {status && (
-                  <span className="text-sm text-green-300">
-                    {status}
+                {status && !saving && (
+                  <span className="rounded-full border border-emerald-500/15 bg-emerald-500/[0.08] px-3 py-1.5 text-xs font-medium text-emerald-300">
+                    ✓ {status}
                   </span>
                 )}
               </div>
             </div>
           </header>
 
-          <section className="px-6 py-10 lg:px-10">
+          <section className="mx-auto max-w-[1500px] px-5 py-7 lg:px-8 lg:py-9">
             {section ===
               "overview" && (
               <>
@@ -1059,12 +1183,6 @@ export default function ServerDashboard({
                   }
                 />
 
-                <ComingNext>
-                  Next we’ll add the real
-                  Discord channel selector
-                  and individual log-event
-                  toggles.
-                </ComingNext>
               </ModulePage>
             )}
 
@@ -1579,19 +1697,25 @@ function ModulePage({
 }) {
   return (
     <>
-      <p className="text-sm font-medium text-indigo-400">
-        {eyebrow}
-      </p>
+      <div className="relative overflow-hidden rounded-3xl border border-white/[0.07] bg-gradient-to-br from-white/[0.045] to-white/[0.018] px-6 py-7 shadow-2xl shadow-black/20 sm:px-8">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-52 w-52 rounded-full bg-indigo-500/[0.09] blur-3xl" />
 
-      <h2 className="mt-2 text-3xl font-bold">
-        {title}
-      </h2>
+        <div className="relative">
+          <span className="inline-flex rounded-full border border-indigo-500/15 bg-indigo-500/[0.08] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-300">
+            {eyebrow}
+          </span>
 
-      <p className="mt-3 max-w-2xl text-zinc-400">
-        {description}
-      </p>
+          <h2 className="mt-4 text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
+            {title}
+          </h2>
 
-      <div className="mt-8 space-y-4">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
+            {description}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-3">
         {children}
       </div>
     </>
@@ -1611,30 +1735,45 @@ function SettingToggle({
     (enabled: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-6 rounded-2xl border border-white/10 bg-white/[0.025] p-6">
-      <div>
-        <h3 className="font-semibold">
-          {title}
-        </h3>
+    <div className="group flex items-center justify-between gap-5 rounded-2xl border border-white/[0.07] bg-[#0b0c10]/80 px-5 py-4 transition hover:border-white/[0.11] hover:bg-white/[0.028]">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-zinc-100">
+            {title}
+          </h3>
 
-        <p className="mt-1 text-sm text-zinc-500">
+          {enabled && (
+            <span className="rounded-full bg-emerald-500/[0.08] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-400">
+              Active
+            </span>
+          )}
+        </div>
+
+        <p className="mt-1 max-w-2xl text-xs leading-5 text-zinc-600">
           {description}
         </p>
       </div>
 
       <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
         onClick={() =>
           onChange(!enabled)
         }
-        className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
+        className={`relative h-6 w-11 shrink-0 rounded-full border transition-all ${
           enabled
-            ? "bg-indigo-500 text-white"
-            : "bg-white/10 text-zinc-400"
+            ? "border-indigo-400/30 bg-indigo-500 shadow-[0_0_16px_rgba(99,102,241,.18)]"
+            : "border-white/10 bg-zinc-800"
         }`}
       >
-        {enabled
-          ? "Enabled"
-          : "Disabled"}
+        <span
+          className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition-all ${
+            enabled
+              ? "left-[22px]"
+              : "left-[3px]"
+          }`}
+        />
       </button>
     </div>
   );
@@ -1656,37 +1795,50 @@ function MessageEditor({
     useState(value);
 
   return (
-    <div className={`rounded-2xl border border-white/10 bg-white/[0.025] p-6 ${
-      disabled
-        ? "opacity-50"
-        : ""
-    }`}>
-      <label className="font-semibold">
-        {title}
-      </label>
+    <div
+      className={`rounded-2xl border border-white/[0.07] bg-[#0b0c10]/80 p-5 ${
+        disabled
+          ? "opacity-45"
+          : ""
+      }`}
+    >
+      <div>
+        <label className="text-sm font-semibold text-zinc-100">
+          {title}
+        </label>
+
+        <p className="mt-1 text-xs text-zinc-600">
+          Customize what UtilityX sends.
+        </p>
+      </div>
 
       <textarea
         value={draft}
         disabled={disabled}
         maxLength={1000}
-        rows={4}
+        rows={3}
         onChange={(event) =>
           setDraft(
             event.target.value
           )
         }
-        className="mt-4 w-full resize-none rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-indigo-500 disabled:cursor-not-allowed"
+        className="mt-4 w-full resize-none rounded-xl border border-white/[0.07] bg-black/25 px-4 py-3 text-sm leading-6 text-zinc-200 outline-none transition placeholder:text-zinc-700 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 disabled:cursor-not-allowed"
       />
 
-      <div className="mt-3 flex justify-end">
+      <div className="mt-3 flex items-center justify-between">
+        <span className="text-[10px] text-zinc-700">
+          {draft.length}/1000
+        </span>
+
         <button
+          type="button"
           disabled={disabled}
           onClick={() =>
             onSave(draft)
           }
-          className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-zinc-200 disabled:opacity-40"
+          className="rounded-lg bg-zinc-100 px-3.5 py-2 text-xs font-semibold text-zinc-950 transition hover:bg-white disabled:opacity-40"
         >
-          Save Message
+          Save
         </button>
       </div>
     </div>
@@ -1714,16 +1866,16 @@ function NumberSetting({
     useState(value);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
-      <h3 className="font-semibold">
+    <div className="rounded-2xl border border-white/[0.07] bg-[#0b0c10]/80 p-5">
+      <h3 className="text-sm font-semibold text-zinc-100">
         {title}
       </h3>
 
-      <p className="mt-1 text-sm text-zinc-500">
+      <p className="mt-1 text-xs leading-5 text-zinc-600">
         {description}
       </p>
 
-      <div className="mt-4 flex items-center gap-3">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <input
           type="number"
           min={min}
@@ -1736,16 +1888,17 @@ function NumberSetting({
               )
             )
           }
-          className="w-32 rounded-xl border border-white/10 bg-black/30 px-4 py-3 outline-none focus:border-indigo-500"
+          className="h-10 w-24 rounded-lg border border-white/[0.08] bg-black/30 px-3 text-sm font-medium text-zinc-200 outline-none transition focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10"
         />
 
         {suffix && (
-          <span className="text-sm text-zinc-500">
+          <span className="text-xs text-zinc-600">
             {suffix}
           </span>
         )}
 
         <button
+          type="button"
           onClick={() =>
             onSave(
               Math.min(
@@ -1757,9 +1910,9 @@ function NumberSetting({
               )
             )
           }
-          className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-zinc-200"
+          className="ml-auto h-10 rounded-lg border border-white/[0.08] bg-white/[0.05] px-3.5 text-xs font-semibold text-zinc-300 transition hover:bg-white/[0.09] hover:text-white"
         >
-          Save
+          Apply
         </button>
       </div>
     </div>
@@ -1782,18 +1935,35 @@ function StringListEditor({
       values.join("\n")
     );
 
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
-      <h3 className="font-semibold">
-        {title}
-      </h3>
+  const count =
+    draft
+      .split("\n")
+      .map((item) =>
+        item.trim()
+      )
+      .filter(Boolean)
+      .length;
 
-      <p className="mt-1 text-sm text-zinc-500">
-        {description}
-      </p>
+  return (
+    <div className="rounded-2xl border border-white/[0.07] bg-[#0b0c10]/80 p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-100">
+            {title}
+          </h3>
+
+          <p className="mt-1 text-xs leading-5 text-zinc-600">
+            {description}
+          </p>
+        </div>
+
+        <span className="rounded-full bg-white/[0.04] px-2.5 py-1 text-[10px] text-zinc-500">
+          {count} configured
+        </span>
+      </div>
 
       <textarea
-        rows={6}
+        rows={5}
         value={draft}
         onChange={(event) =>
           setDraft(
@@ -1801,15 +1971,16 @@ function StringListEditor({
           )
         }
         placeholder={"word1\nword2\nword3"}
-        className="mt-4 w-full resize-none rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-indigo-500"
+        className="mt-4 w-full resize-none rounded-xl border border-white/[0.07] bg-black/25 px-4 py-3 text-sm leading-6 text-zinc-300 outline-none transition focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10"
       />
 
-      <div className="mt-3 flex justify-between text-xs text-zinc-600">
-        <span>
+      <div className="mt-3 flex items-center justify-between">
+        <span className="text-[10px] text-zinc-700">
           One entry per line
         </span>
 
         <button
+          type="button"
           onClick={() =>
             onSave(
               [
@@ -1825,9 +1996,9 @@ function StringListEditor({
               ].slice(0, 100)
             )
           }
-          className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-zinc-200"
+          className="rounded-lg bg-zinc-100 px-3.5 py-2 text-xs font-semibold text-zinc-950 transition hover:bg-white"
         >
-          Save List
+          Save list
         </button>
       </div>
     </div>
@@ -1863,53 +2034,53 @@ function MultiResourceSelect({
     );
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+    <div className="rounded-2xl border border-white/[0.07] bg-[#0b0c10]/80 p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="font-semibold">
+          <h3 className="text-sm font-semibold text-zinc-100">
             {title}
           </h3>
 
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-xs leading-5 text-zinc-600">
             {description}
           </p>
         </div>
 
-        <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-xs text-indigo-300">
+        <span className="rounded-full bg-indigo-500/[0.08] px-2.5 py-1 text-[10px] font-medium text-indigo-300">
           {values.length}/{limit}
         </span>
       </div>
 
       {!!values.length && (
         <div className="mt-4 flex flex-wrap gap-2">
-          {values.map(
-            (id) => {
-              const option =
-                options.find(
-                  (entry) =>
-                    entry.id === id
-                );
-
-              return (
-                <button
-                  key={id}
-                  onClick={() =>
-                    onChange(
-                      values.filter(
-                        (value) =>
-                          value !== id
-                      )
-                    )
-                  }
-                  className="rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-200"
-                >
-                  {prefix}
-                  {option?.name ??
-                    "Unknown"} ×
-                </button>
+          {values.map((id) => {
+            const option =
+              options.find(
+                (entry) =>
+                  entry.id === id
               );
-            }
-          )}
+
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() =>
+                  onChange(
+                    values.filter(
+                      (value) =>
+                        value !== id
+                    )
+                  )
+                }
+                className="rounded-lg border border-indigo-500/15 bg-indigo-500/[0.07] px-2.5 py-1.5 text-xs text-indigo-200 transition hover:border-red-500/20 hover:bg-red-500/[0.07] hover:text-red-300"
+              >
+                {prefix}
+                {option?.name ??
+                  "Unknown"}{" "}
+                ×
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -1933,7 +2104,7 @@ function MultiResourceSelect({
             ]);
           }
         }}
-        className="mt-4 w-full rounded-xl border border-white/10 bg-[#0d0e12] px-4 py-3 text-sm outline-none disabled:opacity-40"
+        className="mt-4 h-10 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 text-sm text-zinc-300 outline-none transition focus:border-indigo-500/50 disabled:opacity-40"
       >
         <option value="">
           Add exemption...
@@ -1973,93 +2144,113 @@ function MultiRoleSelect({
   limit: number;
   onChange: (values: string[]) => void;
 }) {
-  const available = options.filter(
-    (option) => !values.includes(option.id)
-  );
+  const available =
+    options.filter(
+      (option) =>
+        !values.includes(
+          option.id
+        )
+    );
 
   function addRole(roleId: string) {
-    if (!roleId || values.length >= limit) {
+    if (
+      !roleId ||
+      values.length >= limit
+    ) {
       return;
     }
 
-    onChange([...values, roleId]);
-  }
-
-  function removeRole(roleId: string) {
-    onChange(
-      values.filter((value) => value !== roleId)
-    );
+    onChange([
+      ...values,
+      roleId,
+    ]);
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+    <div className="rounded-2xl border border-white/[0.07] bg-[#0b0c10]/80 p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <label className="font-semibold">
+          <h3 className="text-sm font-semibold text-zinc-100">
             {title}
-          </label>
+          </h3>
 
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-xs leading-5 text-zinc-600">
             {description}
           </p>
         </div>
 
-        <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300">
-          {values.length} / {limit}
+        <span className="rounded-full bg-indigo-500/[0.08] px-2.5 py-1 text-[10px] font-medium text-indigo-300">
+          {values.length}/{limit}
         </span>
       </div>
 
       {values.length > 0 && (
-        <div className="mt-5 flex flex-wrap gap-2">
-          {values.map((roleId) => {
-            const role = options.find(
-              (option) => option.id === roleId
-            );
+        <div className="mt-4 flex flex-wrap gap-2">
+          {values.map(
+            (roleId) => {
+              const role =
+                options.find(
+                  (option) =>
+                    option.id ===
+                    roleId
+                );
 
-            return (
-              <button
-                key={roleId}
-                type="button"
-                onClick={() => removeRole(roleId)}
-                className="inline-flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-200 transition hover:bg-red-500/10 hover:text-red-300"
-              >
-                @{role?.name ?? "Unknown Role"}
-                <span className="text-xs opacity-60">
+              return (
+                <button
+                  key={roleId}
+                  type="button"
+                  onClick={() =>
+                    onChange(
+                      values.filter(
+                        (value) =>
+                          value !==
+                          roleId
+                      )
+                    )
+                  }
+                  className="rounded-lg border border-indigo-500/15 bg-indigo-500/[0.07] px-2.5 py-1.5 text-xs text-indigo-200 transition hover:bg-red-500/[0.07] hover:text-red-300"
+                >
+                  @
+                  {role?.name ??
+                    "Unknown Role"}{" "}
                   ×
-                </span>
-              </button>
-            );
-          })}
+                </button>
+              );
+            }
+          )}
         </div>
       )}
 
       <select
         value=""
-        disabled={values.length >= limit}
-        onChange={(event) =>
-          addRole(event.target.value)
+        disabled={
+          values.length >= limit
         }
-        className="mt-5 w-full rounded-xl border border-white/10 bg-[#0d0e12] px-4 py-3 text-sm text-white outline-none focus:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+        onChange={(event) =>
+          addRole(
+            event.target.value
+          )
+        }
+        className="mt-4 h-10 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 text-sm text-zinc-300 outline-none transition focus:border-indigo-500/50 disabled:opacity-40"
       >
         <option value="">
-          {values.length >= limit
-            ? "Auto-role limit reached"
+          {values.length >=
+          limit
+            ? "Role limit reached"
             : "Add another role..."}
         </option>
 
-        {available.map((role) => (
-          <option
-            key={role.id}
-            value={role.id}
-          >
-            @{role.name}
-          </option>
-        ))}
+        {available.map(
+          (role) => (
+            <option
+              key={role.id}
+              value={role.id}
+            >
+              @{role.name}
+            </option>
+          )
+        )}
       </select>
-
-      <p className="mt-3 text-xs text-zinc-600">
-        Click a selected role above to remove it.
-      </p>
     </div>
   );
 }
@@ -2085,37 +2276,42 @@ function ResourceSelect({
   onChange: (value: string | null) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
-      <label className="font-semibold">
-        {title}
-      </label>
+    <div className="grid gap-4 rounded-2xl border border-white/[0.07] bg-[#0b0c10]/80 px-5 py-4 md:grid-cols-[1fr_minmax(260px,42%)] md:items-center">
+      <div>
+        <h3 className="text-sm font-semibold text-zinc-100">
+          {title}
+        </h3>
 
-      <p className="mt-1 text-sm text-zinc-500">
-        {description}
-      </p>
+        <p className="mt-1 text-xs leading-5 text-zinc-600">
+          {description}
+        </p>
+      </div>
 
       <select
         value={value ?? ""}
         onChange={(event) =>
           onChange(
-            event.target.value || null
+            event.target.value ||
+              null
           )
         }
-        className="mt-4 w-full rounded-xl border border-white/10 bg-[#0d0e12] px-4 py-3 text-sm text-white outline-none focus:border-indigo-500"
+        className="h-10 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 text-sm text-zinc-300 outline-none transition focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10"
       >
         <option value="">
           {placeholder}
         </option>
 
-        {options.map((option) => (
-          <option
-            key={option.id}
-            value={option.id}
-          >
-            {prefix}
-            {option.name}
-          </option>
-        ))}
+        {options.map(
+          (option) => (
+            <option
+              key={option.id}
+              value={option.id}
+            >
+              {prefix}
+              {option.name}
+            </option>
+          )
+        )}
       </select>
     </div>
   );
@@ -2131,18 +2327,22 @@ function InfoCard({
   detail: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
-      <p className="text-sm text-zinc-500">
-        {title}
-      </p>
+    <div className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-br from-white/[0.045] to-white/[0.018] p-5">
+      <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-indigo-500/[0.08] blur-2xl" />
 
-      <p className="mt-3 text-2xl font-bold">
-        {value}
-      </p>
+      <div className="relative">
+        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-600">
+          {title}
+        </p>
 
-      <p className="mt-2 text-xs text-zinc-600">
-        {detail}
-      </p>
+        <p className="mt-3 text-2xl font-bold tracking-tight text-zinc-50">
+          {value}
+        </p>
+
+        <p className="mt-1.5 text-xs text-zinc-600">
+          {detail}
+        </p>
+      </div>
     </div>
   );
 }
@@ -2154,15 +2354,23 @@ function StatusBadge({
 }) {
   return (
     <span
-      className={`rounded-full px-3 py-1 text-xs font-medium ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium ${
         enabled
-          ? "bg-green-500/10 text-green-300"
-          : "bg-white/5 text-zinc-500"
+          ? "bg-emerald-500/[0.08] text-emerald-300"
+          : "bg-white/[0.04] text-zinc-600"
       }`}
     >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          enabled
+            ? "bg-emerald-400"
+            : "bg-zinc-700"
+        }`}
+      />
+
       {enabled
-        ? "Enabled"
-        : "Disabled"}
+        ? "Active"
+        : "Off"}
     </span>
   );
 }
@@ -2176,11 +2384,11 @@ function ReadOnlyField({
 }) {
   return (
     <div>
-      <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+      <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
         {label}
       </label>
 
-      <div className="mt-2 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-300">
+      <div className="mt-2 rounded-xl border border-white/[0.07] bg-black/25 px-4 py-3 text-sm text-zinc-300">
         {value}
       </div>
     </div>
@@ -2194,7 +2402,11 @@ function ComingNext({
     React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-indigo-500/10 bg-indigo-500/5 p-5 text-sm leading-6 text-indigo-200/80">
+    <div className="rounded-2xl border border-indigo-500/10 bg-indigo-500/[0.045] px-5 py-4 text-xs leading-6 text-indigo-200/70">
+      <span className="mr-2 font-semibold text-indigo-300">
+        Coming soon
+      </span>
+
       {children}
     </div>
   );
