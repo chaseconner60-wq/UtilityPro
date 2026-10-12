@@ -21,16 +21,27 @@ export default function GuildList() {
       try {
         const response = await fetch("/api/discord/guilds", {
           cache: "no-store",
+          credentials: "same-origin",
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-          throw new Error("Failed to load servers.");
+          throw new Error(
+            data.error ||
+              `Unable to load servers (${response.status}).`
+          );
         }
 
-        const data = await response.json();
         setGuilds(data.guilds ?? []);
-      } catch {
-        setError("Unable to load your Discord servers.");
+      } catch (error) {
+        console.error("Guild list error:", error);
+
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load your Discord servers."
+        );
       } finally {
         setLoading(false);
       }
@@ -72,7 +83,12 @@ export default function GuildList() {
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {guilds.map((guild) => {
           const iconUrl = guild.icon
-            ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128`
+            ? "https" +
+              "://cdn.discordapp.com/icons/" +
+              guild.id +
+              "/" +
+              guild.icon +
+              ".png?size=128"
             : null;
 
           return (
