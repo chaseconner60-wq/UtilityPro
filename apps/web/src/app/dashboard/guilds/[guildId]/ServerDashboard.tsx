@@ -882,47 +882,6 @@ export default function ServerDashboard({
                   }
                 />
 
-                <div className="mt-8 border-t border-white/10 pt-8">
-                  <p className="text-sm font-medium text-indigo-400">
-                    Automatic Roles
-                  </p>
-
-                  <h3 className="mt-1 text-xl font-bold">
-                    Auto Role
-                  </h3>
-
-                  <p className="mt-2 text-sm text-zinc-500">
-                    Automatically give new members a Discord role when they join.
-                  </p>
-                </div>
-
-                <MultiRoleSelect
-                  title="Auto Roles"
-                  description="UtilityX can automatically assign up to 5 roles when a new member joins."
-                  values={settings.autoRoleIds ?? []}
-                  options={selectableRoles}
-                  limit={5}
-                  onChange={(values) =>
-                    void save({
-                      autoRoleIds: values,
-                    })
-                  }
-                />
-
-                <SettingToggle
-                  title="Auto Role Assignment"
-                  description="Automatically assign the selected role when a member joins."
-                  enabled={
-                    settings.autoRoleEnabled
-                  }
-                  onChange={(enabled) =>
-                    void save({
-                      autoRoleEnabled:
-                        enabled,
-                    })
-                  }
-                />
-
                 <div className="rounded-xl border border-indigo-500/10 bg-indigo-500/5 p-4 text-sm text-indigo-200">
                   Variables supported:
                   {" "}
@@ -1399,283 +1358,422 @@ export default function ServerDashboard({
             {section ===
               "automod" && (
               <ModulePage
-                eyebrow="Protection"
+                eyebrow="Safety"
                 title="AutoMod"
-                description="Automatically detect and stop spam, unwanted links, mass mentions and other disruptive messages."
+                description="Automatically detect spam, unwanted content and disruptive messages before they become a problem."
               >
-                <SettingToggle
-                  title="AutoMod Engine"
-                  description="Enable UtilityX automatic message protection."
-                  enabled={settings.automodEnabled}
-                  onChange={(enabled) =>
-                    void save({
-                      automodEnabled:
-                        enabled,
-                    })
-                  }
-                />
-
-                <ResourceSelect
-                  title="AutoMod Log Channel"
-                  description="Channel where automatic moderation actions are logged."
-                  value={settings.automodLogChannelId}
-                  options={textChannels}
-                  placeholder="Select AutoMod log channel"
-                  prefix="#"
-                  onChange={(value) =>
-                    void save({
-                      automodLogChannelId:
-                        value,
-                    })
-                  }
-                />
-
-                <SettingToggle
-                  title="Anti-Spam"
-                  description="Detect users sending too many messages in a short period."
-                  enabled={settings.antiSpamEnabled}
-                  onChange={(enabled) =>
-                    void save({
-                      antiSpamEnabled:
-                        enabled,
-                    })
-                  }
-                />
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <NumberSetting
-                    title="Spam Message Limit"
-                    description="Number of messages allowed inside the spam window."
-                    value={settings.spamMessageLimit}
-                    min={2}
-                    max={20}
-                    onSave={(value) =>
+                <SettingsGroup
+                  eyebrow="Status"
+                  title="Protection"
+                  description="Control the AutoMod engine and where enforcement activity is recorded."
+                >
+                  <SettingToggle
+                    title="AutoMod Engine"
+                    description="Enable UtilityX automatic message protection."
+                    enabled={
+                      settings.automodEnabled
+                    }
+                    onChange={(enabled) =>
                       void save({
-                        spamMessageLimit:
-                          value,
+                        automodEnabled:
+                          enabled,
                       })
                     }
                   />
 
-                  <NumberSetting
-                    title="Spam Window"
-                    description="How quickly the message limit must be reached."
-                    value={settings.spamIntervalSeconds}
-                    min={2}
-                    max={60}
-                    suffix="seconds"
-                    onSave={(value) =>
+                  <ResourceSelect
+                    title="AutoMod Log Channel"
+                    description="Channel where automatic moderation actions are logged."
+                    value={
+                      settings.automodLogChannelId
+                    }
+                    options={
+                      textChannels
+                    }
+                    placeholder="Select AutoMod log channel"
+                    prefix="#"
+                    onChange={(value) =>
                       void save({
-                        spamIntervalSeconds:
+                        automodLogChannelId:
                           value,
                       })
                     }
                   />
-                </div>
+                </SettingsGroup>
 
-                <SettingToggle
-                  title="Repeated Messages"
-                  description="Detect the same message being posted repeatedly."
-                  enabled={settings.duplicateMessagesEnabled}
-                  onChange={(enabled) =>
-                    void save({
-                      duplicateMessagesEnabled:
-                        enabled,
-                    })
-                  }
-                />
-
-                <NumberSetting
-                  title="Maximum Mentions"
-                  description="Messages containing more mentions than this will trigger AutoMod."
-                  value={settings.maxMentions}
-                  min={1}
-                  max={50}
-                  onSave={(value) =>
-                    void save({
-                      maxMentions:
-                        value,
-                    })
-                  }
-                />
-
-                <SettingToggle
-                  title="Excessive Caps"
-                  description="Detect messages containing excessive capital letters."
-                  enabled={settings.capsFilterEnabled}
-                  onChange={(enabled) =>
-                    void save({
-                      capsFilterEnabled:
-                        enabled,
-                    })
-                  }
-                />
-
-                <NumberSetting
-                  title="Caps Threshold"
-                  description="Percentage of letters that must be uppercase before AutoMod triggers."
-                  value={settings.capsPercentage}
-                  min={50}
-                  max={100}
-                  suffix="%"
-                  onSave={(value) =>
-                    void save({
-                      capsPercentage:
-                        value,
-                    })
-                  }
-                />
-
-                <SettingToggle
-                  title="Block Discord Invites"
-                  description="Delete Discord invite links posted by non-exempt members."
-                  enabled={settings.blockInvites}
-                  onChange={(enabled) =>
-                    void save({
-                      blockInvites:
-                        enabled,
-                    })
-                  }
-                />
-
-                <SettingToggle
-                  title="Block External Links"
-                  description="Delete normal website links posted by non-exempt members."
-                  enabled={settings.blockLinks}
-                  onChange={(enabled) =>
-                    void save({
-                      blockLinks:
-                        enabled,
-                    })
-                  }
-                />
-
-                <StringListEditor
-                  title="Blocked Words"
-                  description="Messages containing these words will trigger AutoMod."
-                  values={settings.blockedWords ?? []}
-                  onSave={(values) =>
-                    void save({
-                      blockedWords:
-                        values,
-                    })
-                  }
-                />
-
-                <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
-                  <h3 className="font-semibold">
-                    AutoMod Action
-                  </h3>
-
-                  <p className="mt-1 text-sm text-zinc-500">
-                    UtilityX always removes the violating message. Choose the additional punishment.
-                  </p>
-
-                  <select
-                    value={settings.automodAction}
-                    onChange={(event) =>
-                      void save({
-                        automodAction:
-                          event.target.value,
-                      })
+                <SettingsGroup
+                  eyebrow="Spam"
+                  title="Spam Protection"
+                  description="Detect rapid or repetitive messages before they flood your server."
+                >
+                  <SettingToggle
+                    title="Anti-Spam"
+                    description="Detect users sending too many messages in a short period."
+                    enabled={
+                      settings.antiSpamEnabled
                     }
-                    className="mt-4 w-full rounded-xl border border-white/10 bg-[#0d0e12] px-4 py-3 text-sm outline-none"
-                  >
-                    <option value="delete">
-                      Delete only
-                    </option>
-
-                    <option value="warn">
-                      Delete + warning
-                    </option>
-
-                    <option value="timeout">
-                      Delete + timeout
-                    </option>
-                  </select>
-                </div>
-
-                {settings.automodAction ===
-                  "timeout" && (
-                  <NumberSetting
-                    title="AutoMod Timeout"
-                    description="Timeout duration when AutoMod punishment is set to timeout."
-                    value={settings.automodTimeoutMinutes}
-                    min={1}
-                    max={10080}
-                    suffix="minutes"
-                    onSave={(value) =>
+                    onChange={(enabled) =>
                       void save({
-                        automodTimeoutMinutes:
-                          value,
+                        antiSpamEnabled:
+                          enabled,
                       })
                     }
                   />
-                )}
 
-                <MultiResourceSelect
-                  title="Exempt Roles"
-                  description="Members with these roles bypass UtilityX AutoMod."
-                  values={settings.automodExemptRoleIds ?? []}
-                  options={selectableRoles}
-                  limit={25}
-                  prefix="@"
-                  onChange={(values) =>
-                    void save({
-                      automodExemptRoleIds:
-                        values,
-                    })
-                  }
-                />
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <NumberSetting
+                      title="Message Limit"
+                      description="Messages allowed before AutoMod triggers."
+                      value={
+                        settings.spamMessageLimit
+                      }
+                      min={2}
+                      max={20}
+                      onSave={(value) =>
+                        void save({
+                          spamMessageLimit:
+                            value,
+                        })
+                      }
+                    />
 
-                <MultiResourceSelect
-                  title="Exempt Channels"
-                  description="AutoMod will not inspect messages in these channels."
-                  values={settings.automodExemptChannelIds ?? []}
-                  options={textChannels}
-                  limit={25}
-                  prefix="#"
-                  onChange={(values) =>
-                    void save({
-                      automodExemptChannelIds:
-                        values,
-                    })
-                  }
-                />
+                    <NumberSetting
+                      title="Time Window"
+                      description="Time in which the message limit must be reached."
+                      value={
+                        settings.spamIntervalSeconds
+                      }
+                      min={2}
+                      max={60}
+                      suffix="seconds"
+                      onSave={(value) =>
+                        void save({
+                          spamIntervalSeconds:
+                            value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <SettingToggle
+                    title="Repeated Messages"
+                    description="Detect the same message being posted repeatedly."
+                    enabled={
+                      settings.duplicateMessagesEnabled
+                    }
+                    onChange={(enabled) =>
+                      void save({
+                        duplicateMessagesEnabled:
+                          enabled,
+                      })
+                    }
+                  />
+                </SettingsGroup>
+
+                <SettingsGroup
+                  eyebrow="Content"
+                  title="Content Filtering"
+                  description="Control what kinds of messages UtilityX allows."
+                >
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <NumberSetting
+                      title="Maximum Mentions"
+                      description="Messages above this number of mentions trigger AutoMod."
+                      value={
+                        settings.maxMentions
+                      }
+                      min={1}
+                      max={50}
+                      onSave={(value) =>
+                        void save({
+                          maxMentions:
+                            value,
+                        })
+                      }
+                    />
+
+                    <NumberSetting
+                      title="Caps Threshold"
+                      description="Percentage of uppercase letters required to trigger the filter."
+                      value={
+                        settings.capsPercentage
+                      }
+                      min={50}
+                      max={100}
+                      suffix="%"
+                      onSave={(value) =>
+                        void save({
+                          capsPercentage:
+                            value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-3 lg:grid-cols-3">
+                    <SettingToggle
+                      title="Excessive Caps"
+                      description="Detect messages containing excessive capital letters."
+                      enabled={
+                        settings.capsFilterEnabled
+                      }
+                      onChange={(enabled) =>
+                        void save({
+                          capsFilterEnabled:
+                            enabled,
+                        })
+                      }
+                    />
+
+                    <SettingToggle
+                      title="Discord Invites"
+                      description="Block Discord invite links from non-exempt members."
+                      enabled={
+                        settings.blockInvites
+                      }
+                      onChange={(enabled) =>
+                        void save({
+                          blockInvites:
+                            enabled,
+                        })
+                      }
+                    />
+
+                    <SettingToggle
+                      title="External Links"
+                      description="Block normal website links from non-exempt members."
+                      enabled={
+                        settings.blockLinks
+                      }
+                      onChange={(enabled) =>
+                        void save({
+                          blockLinks:
+                            enabled,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <StringListEditor
+                    title="Blocked Words"
+                    description="Messages containing configured words will trigger AutoMod."
+                    values={
+                      settings.blockedWords ??
+                      []
+                    }
+                    onSave={(values) =>
+                      void save({
+                        blockedWords:
+                          values,
+                      })
+                    }
+                  />
+                </SettingsGroup>
+
+                <SettingsGroup
+                  eyebrow="Enforcement"
+                  title="AutoMod Action"
+                  description="Choose what UtilityX does when a message violates an AutoMod rule."
+                >
+                  <div className="grid gap-4 rounded-2xl border border-white/[0.07] bg-[#0b0c10]/80 p-5 md:grid-cols-[1fr_minmax(240px,38%)] md:items-center">
+                    <div>
+                      <h3 className="text-sm font-semibold text-zinc-100">
+                        Violation Action
+                      </h3>
+
+                      <p className="mt-1 text-xs leading-5 text-zinc-600">
+                        UtilityX always removes the violating message. Select an additional punishment.
+                      </p>
+                    </div>
+
+                    <select
+                      value={
+                        settings.automodAction
+                      }
+                      onChange={(event) =>
+                        void save({
+                          automodAction:
+                            event.target.value,
+                        })
+                      }
+                      className="h-10 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 text-sm text-zinc-300 outline-none transition focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10"
+                    >
+                      <option value="delete">
+                        Delete message
+                      </option>
+
+                      <option value="warn">
+                        Delete + warning
+                      </option>
+
+                      <option value="timeout">
+                        Delete + timeout
+                      </option>
+                    </select>
+                  </div>
+
+                  {settings.automodAction ===
+                    "timeout" && (
+                    <NumberSetting
+                      title="Timeout Duration"
+                      description="How long a member is timed out when AutoMod triggers."
+                      value={
+                        settings.automodTimeoutMinutes
+                      }
+                      min={1}
+                      max={10080}
+                      suffix="minutes"
+                      onSave={(value) =>
+                        void save({
+                          automodTimeoutMinutes:
+                            value,
+                        })
+                      }
+                    />
+                  )}
+                </SettingsGroup>
+
+                <SettingsGroup
+                  eyebrow="Bypasses"
+                  title="Exemptions"
+                  description="Allow trusted roles and channels to bypass automatic moderation."
+                >
+                  <div className="grid gap-3 xl:grid-cols-2">
+                    <MultiResourceSelect
+                      title="Exempt Roles"
+                      description="Members with these roles bypass UtilityX AutoMod."
+                      values={
+                        settings.automodExemptRoleIds ??
+                        []
+                      }
+                      options={
+                        selectableRoles
+                      }
+                      limit={25}
+                      prefix="@"
+                      onChange={(values) =>
+                        void save({
+                          automodExemptRoleIds:
+                            values,
+                        })
+                      }
+                    />
+
+                    <MultiResourceSelect
+                      title="Exempt Channels"
+                      description="AutoMod ignores messages inside these channels."
+                      values={
+                        settings.automodExemptChannelIds ??
+                        []
+                      }
+                      options={
+                        textChannels
+                      }
+                      limit={25}
+                      prefix="#"
+                      onChange={(values) =>
+                        void save({
+                          automodExemptChannelIds:
+                            values,
+                        })
+                      }
+                    />
+                  </div>
+                </SettingsGroup>
               </ModulePage>
             )}
 
             {section ===
               "automation" && (
               <ModulePage
-                eyebrow="Automation"
+                eyebrow="Advanced"
                 title="Automation"
-                description="Reduce repetitive server-management work."
+                description="Automate repetitive server tasks and member workflows."
               >
-                <SettingToggle
-                  title="Automation Engine"
-                  description="Enable server automation features."
-                  enabled={
-                    settings.automationEnabled
-                  }
-                  onChange={(
-                    enabled
-                  ) =>
-                    void save({
-                      automationEnabled:
-                        enabled,
-                    })
-                  }
-                />
+                <div className="grid gap-3 xl:grid-cols-2">
+                  <div className="xl:col-span-2">
+                    <SettingToggle
+                      title="Automation Engine"
+                      description="Enable UtilityX server automation features."
+                      enabled={
+                        settings.automationEnabled
+                      }
+                      onChange={(enabled) =>
+                        void save({
+                          automationEnabled:
+                            enabled,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
 
-                <ComingNext>
-                  Auto-role, scheduled
-                  messages, member actions
-                  and rule-based workflows
-                  will be configured here.
-                </ComingNext>
+                <SettingsGroup
+                  eyebrow="Members"
+                  title="Automatic Roles"
+                  description="Automatically assign roles when new members join your server."
+                >
+                  <SettingToggle
+                    title="Auto Role Assignment"
+                    description="Automatically assign the selected roles when a member joins."
+                    enabled={
+                      settings.autoRoleEnabled
+                    }
+                    onChange={(enabled) =>
+                      void save({
+                        autoRoleEnabled:
+                          enabled,
+                      })
+                    }
+                  />
+
+                  <MultiRoleSelect
+                    title="Roles to Assign"
+                    description="UtilityX can automatically assign up to 5 roles to new members."
+                    values={
+                      settings.autoRoleIds ?? []
+                    }
+                    options={
+                      selectableRoles
+                    }
+                    limit={5}
+                    onChange={(values) =>
+                      void save({
+                        autoRoleIds:
+                          values,
+                      })
+                    }
+                  />
+                </SettingsGroup>
+
+                <SettingsGroup
+                  eyebrow="Workflows"
+                  title="More Automation"
+                  description="Additional workflow tools will live here as UtilityX expands."
+                >
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <AutomationPreview
+                      icon="◷"
+                      title="Scheduled Messages"
+                      description="Send announcements and reminders automatically."
+                    />
+
+                    <AutomationPreview
+                      icon="↳"
+                      title="Auto Replies"
+                      description="Reply when configured words or phrases are detected."
+                    />
+
+                    <AutomationPreview
+                      icon="⚡"
+                      title="Rule Workflows"
+                      description="Trigger actions when configured server events occur."
+                    />
+                  </div>
+                </SettingsGroup>
               </ModulePage>
             )}
+
           </section>
         </div>
       </div>
@@ -1719,6 +1817,74 @@ function ModulePage({
         {children}
       </div>
     </>
+  );
+}
+
+function SettingsGroup({
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.018]">
+      <div className="border-b border-white/[0.06] px-5 py-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-400">
+          {eyebrow}
+        </p>
+
+        <div className="mt-1 flex flex-col gap-1">
+          <h3 className="text-base font-semibold tracking-tight text-zinc-100">
+            {title}
+          </h3>
+
+          <p className="text-xs leading-5 text-zinc-600">
+            {description}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-3 p-3 sm:p-4">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function AutomationPreview({
+  icon,
+  title,
+  description,
+}: {
+  icon: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="group rounded-2xl border border-white/[0.07] bg-[#0b0c10]/80 p-5 transition hover:border-indigo-500/20 hover:bg-indigo-500/[0.025]">
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-sm text-indigo-300">
+        {icon}
+      </div>
+
+      <div className="mt-4 flex items-center gap-2">
+        <h4 className="text-sm font-semibold text-zinc-200">
+          {title}
+        </h4>
+
+        <span className="rounded-full bg-white/[0.04] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-zinc-600">
+          Soon
+        </span>
+      </div>
+
+      <p className="mt-1.5 text-xs leading-5 text-zinc-600">
+        {description}
+      </p>
+    </div>
   );
 }
 
