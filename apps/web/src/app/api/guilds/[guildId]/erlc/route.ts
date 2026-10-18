@@ -24,7 +24,16 @@ const MANAGE_GUILD =
 
 async function authorize(
   guildId: string
-) {
+): Promise<
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      reason: string;
+      status: number;
+    }
+> {
   const cookieStore =
     await cookies();
 
@@ -34,7 +43,12 @@ async function authorize(
     );
 
   if (!cookie) {
-    return null;
+    return {
+      ok: false,
+      reason:
+        "UtilityX session cookie is missing.",
+      status: 401,
+    };
   }
 
   let session;
@@ -45,7 +59,23 @@ async function authorize(
         cookie.value
       );
   } catch {
-    return null;
+    return {
+      ok: false,
+      reason:
+        "UtilityX could not decrypt your Discord session.",
+      status: 401,
+    };
+  }
+
+  if (
+    !session.accessToken
+  ) {
+    return {
+      ok: false,
+      reason:
+        "Your UtilityX session does not contain a Discord access token.",
+      status: 401,
+    };
   }
 
   const discordBase =
@@ -70,7 +100,12 @@ async function authorize(
     );
 
   if (!response.ok) {
-    return null;
+    return {
+      ok: false,
+      reason:
+        `Discord guild authorization request failed with HTTP ${response.status}.`,
+      status: 401,
+    };
   }
 
   const guilds =
@@ -83,7 +118,12 @@ async function authorize(
     );
 
   if (!guild) {
-    return null;
+    return {
+      ok: false,
+      reason:
+        "Discord did not return this server in your manageable server list.",
+      status: 403,
+    };
   }
 
   const permissions =
@@ -91,21 +131,29 @@ async function authorize(
       guild.permissions
     );
 
-  if (
-    !guild.owner &&
+  const allowed =
+    guild.owner ||
     (
       permissions &
       ADMINISTRATOR
-    ) !== ADMINISTRATOR &&
+    ) === ADMINISTRATOR ||
     (
       permissions &
       MANAGE_GUILD
-    ) !== MANAGE_GUILD
-  ) {
-    return null;
+    ) === MANAGE_GUILD;
+
+  if (!allowed) {
+    return {
+      ok: false,
+      reason:
+        "You do not currently have Owner, Administrator, or Manage Server permission for this Discord server.",
+      status: 403,
+    };
   }
 
-  return session;
+  return {
+    ok: true,
+  };
 }
 
 function config() {
@@ -146,18 +194,20 @@ export async function GET(
     guildId,
   } = await params;
 
-  if (
-    !await authorize(
+  const auth =
+    await authorize(
       guildId
-    )
-  ) {
+    );
+
+  if (!auth.ok) {
     return NextResponse.json(
       {
         error:
-          "UtilityX dashboard authorization failed. Please sign in to Discord again and verify you still have Manage Server permission.",
+          auth.reason,
       },
       {
-        status: 401,
+        status:
+          auth.status,
       }
     );
   }
@@ -217,18 +267,20 @@ export async function PUT(
     guildId,
   } = await params;
 
-  if (
-    !await authorize(
+  const auth =
+    await authorize(
       guildId
-    )
-  ) {
+    );
+
+  if (!auth.ok) {
     return NextResponse.json(
       {
         error:
-          "UtilityX dashboard authorization failed. Please sign in to Discord again and verify you still have Manage Server permission.",
+          auth.reason,
       },
       {
-        status: 401,
+        status:
+          auth.status,
       }
     );
   }
@@ -289,18 +341,20 @@ export async function DELETE(
     guildId,
   } = await params;
 
-  if (
-    !await authorize(
+  const auth =
+    await authorize(
       guildId
-    )
-  ) {
+    );
+
+  if (!auth.ok) {
     return NextResponse.json(
       {
         error:
-          "UtilityX dashboard authorization failed. Please sign in to Discord again and verify you still have Manage Server permission.",
+          auth.reason,
       },
       {
-        status: 401,
+        status:
+          auth.status,
       }
     );
   }
