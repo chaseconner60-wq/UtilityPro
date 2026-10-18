@@ -1,5 +1,5 @@
 const DEFAULT_ERLC_API =
-  "https://api.policeroleplay.community";
+  "https://api.erlc.gg";
 
 type RawErlcServer = {
   Name?: string;
