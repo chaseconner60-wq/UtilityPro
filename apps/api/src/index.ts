@@ -3,6 +3,10 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import { and, desc, eq, sql } from "drizzle-orm";
 import {
+  calculateGuildHealth,
+} from "./healthEngine.js";
+
+import {
   db,
   guilds,
   globalSettings,
@@ -107,6 +111,79 @@ app.get<{ Params: { id: string } }>(
     return {
       guild,
     };
+  }
+);
+
+
+app.get<{
+  Params: {
+    guildId: string;
+  };
+}>(
+  "/internal/health/:guildId",
+  async (request, reply) => {
+    const header =
+      request.headers[
+        "x-utilityx-internal-secret"
+      ];
+
+    if (
+      !internalAuthorized(
+        typeof header === "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply.code(401).send({
+        error: "Unauthorized",
+      });
+    }
+
+    const { guildId } =
+      request.params;
+
+    const [installedGuild] =
+      await db
+        .select({
+          id: guilds.id,
+          name: guilds.name,
+        })
+        .from(guilds)
+        .where(
+          eq(
+            guilds.id,
+            guildId
+          )
+        )
+        .limit(1);
+
+    if (!installedGuild) {
+      return reply.code(404).send({
+        error: "Guild not found",
+      });
+    }
+
+    try {
+      const health =
+        await calculateGuildHealth(
+          guildId
+        );
+
+      return {
+        guild: installedGuild,
+        health,
+      };
+    } catch (error) {
+      request.log.error(
+        error,
+        "Failed to calculate guild health."
+      );
+
+      return reply.code(500).send({
+        error:
+          "Unable to calculate Server Health.",
+      });
+    }
   }
 );
 
