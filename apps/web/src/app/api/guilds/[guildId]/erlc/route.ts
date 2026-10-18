@@ -384,10 +384,26 @@ export async function GET(
       "players"
     ) === "1";
 
+  const history =
+    url.searchParams.get(
+      "history"
+    ) === "1";
+
+  const historyUserId =
+    url.searchParams.get(
+      "userId"
+    );
+
   const target =
-    players
-      ? `${apiUrl}/internal/erlc/${guildId}/players`
-      : sessions
+    history
+      ? `${apiUrl}/internal/erlc/${guildId}/player-history${
+          historyUserId
+            ? `?userId=${encodeURIComponent(historyUserId)}`
+            : ""
+        }`
+      : players
+        ? `${apiUrl}/internal/erlc/${guildId}/players`
+        : sessions
         ? `${apiUrl}/internal/erlc/${guildId}/sessions`
         : live
           ? `${apiUrl}/internal/erlc/${guildId}/live`

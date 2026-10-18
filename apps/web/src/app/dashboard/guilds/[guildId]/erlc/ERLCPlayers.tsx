@@ -5,6 +5,22 @@ import {
   useState,
 } from "react";
 
+type PlayerHistory = {
+  userId: string;
+  username: string;
+  currentTeam:
+    | string
+    | null;
+  callsign:
+    | string
+    | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  totalSeconds: number;
+  sessionsAttended: number;
+  joinCount: number;
+};
+
 type Player = {
   userId:
     | string
@@ -33,6 +49,12 @@ export default function ERLCPlayers({
     setPlayers,
   ] =
     useState<Player[]>([]);
+
+  const [
+    history,
+    setHistory,
+  ] =
+    useState<PlayerHistory[]>([]);
 
   const [
     loading,
@@ -88,6 +110,27 @@ export default function ERLCPlayers({
         data.checkedAt ??
           null
       );
+
+      const historyResponse =
+        await fetch(
+          `/api/guilds/${guildId}/erlc?history=1`,
+          {
+            cache:
+              "no-store",
+          }
+        );
+
+      const historyData =
+        await historyResponse.json();
+
+      if (
+        historyResponse.ok
+      ) {
+        setHistory(
+          historyData.players ??
+          []
+        );
+      }
 
       setError("");
     } catch (error) {
@@ -332,8 +375,133 @@ export default function ERLCPlayers({
           </div>
         )}
       </div>
+      <div className="mt-6 overflow-hidden rounded-3xl border border-white/[0.07] bg-white/[0.018]">
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-5">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-400">
+              History
+            </p>
+
+            <h3 className="mt-1 text-lg font-bold">
+              Tracked Players
+            </h3>
+          </div>
+
+          <span className="rounded-full bg-white/[0.04] px-3 py-1 text-xs text-zinc-500">
+            {history.length}
+          </span>
+        </div>
+
+        {history.length ? (
+          <div className="divide-y divide-white/[0.05]">
+            {history.map(
+              (player) => (
+                <div
+                  key={
+                    player.userId
+                  }
+                  className="grid gap-5 px-6 py-5 md:grid-cols-[1.5fr_.8fr_.8fr_.8fr]"
+                >
+                  <div>
+                    <p className="font-semibold text-zinc-200">
+                      {player.username}
+                    </p>
+
+                    <p className="mt-1 text-xs text-zinc-600">
+                      Roblox ID{" "}
+                      {player.userId}
+                    </p>
+
+                    <p className="mt-1 text-xs text-zinc-700">
+                      Last seen{" "}
+                      {new Date(
+                        player.lastSeenAt
+                      ).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <HistoryStat
+                    label="Tracked Time"
+                    value={formatDuration(
+                      player.totalSeconds
+                    )}
+                  />
+
+                  <HistoryStat
+                    label="Sessions"
+                    value={String(
+                      player.sessionsAttended
+                    )}
+                  />
+
+                  <HistoryStat
+                    label="Joins"
+                    value={String(
+                      player.joinCount
+                    )}
+                  />
+                </div>
+              )
+            )}
+          </div>
+        ) : (
+          <div className="p-10 text-center text-sm text-zinc-600">
+            Player history will appear
+            after UtilityX observes
+            players during an active
+            session.
+          </div>
+        )}
+      </div>
+
     </>
   );
+}
+
+function HistoryStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-[0.12em] text-zinc-700">
+        {label}
+      </p>
+
+      <p className="mt-1 text-sm font-semibold text-zinc-300">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function formatDuration(
+  seconds: number
+) {
+  const hours =
+    Math.floor(
+      seconds / 3600
+    );
+
+  const minutes =
+    Math.floor(
+      (
+        seconds % 3600
+      ) / 60
+    );
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes}m`;
+  }
+
+  return `${seconds}s`;
 }
 
 function Metric({

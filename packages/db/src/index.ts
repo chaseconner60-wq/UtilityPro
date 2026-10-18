@@ -30,4 +30,6 @@ export {
   guildStaffMembers,
   erlcConnections,
   erlcSessions,
+  erlcPlayers,
+  erlcPlayerAttendance,
 } from "./schema.js";

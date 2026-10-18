@@ -16,6 +16,12 @@ import {
   getErlcSessions,
   startErlcSessionTracker,
 } from "./erlcSessions.js";
+
+import {
+  getErlcPlayerAttendance,
+  getErlcPlayerHistory,
+  startErlcPlayerTracker,
+} from "./erlcPlayerTracker.js";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import { and, desc, eq, sql } from "drizzle-orm";
@@ -1900,6 +1906,67 @@ app.get<{
   }
 );
 
+
+app.get<{
+  Params: {
+    guildId: string;
+  };
+  Querystring: {
+    userId?: string;
+  };
+}>(
+  "/internal/erlc/:guildId/player-history",
+  async (
+    request,
+    reply
+  ) => {
+    const header =
+      request.headers[
+        "x-utilityx-internal-secret"
+      ];
+
+    if (
+      !internalAuthorized(
+        typeof header ===
+          "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply
+        .code(401)
+        .send({
+          error:
+            "Unauthorized",
+        });
+    }
+
+    const userId =
+      request.query.userId;
+
+    if (userId) {
+      const attendance =
+        await getErlcPlayerAttendance(
+          request.params.guildId,
+          userId
+        );
+
+      return {
+        attendance,
+      };
+    }
+
+    const players =
+      await getErlcPlayerHistory(
+        request.params.guildId
+      );
+
+    return {
+      players,
+    };
+  }
+);
+
 app.get<{
   Params: {
     guildId: string;
@@ -1943,6 +2010,7 @@ app.get<{
 );
 
 startErlcSessionTracker();
+startErlcPlayerTracker();
 
 await app.listen({ port, host });
 } catch (error) {

@@ -724,3 +724,143 @@ export const erlcSessions = pgTable(
       .defaultNow(),
   }
 );
+
+export const erlcPlayers = pgTable(
+  "erlc_players",
+  {
+    id: text("id").primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    userId: text(
+      "user_id"
+    ).notNull(),
+
+    username: text(
+      "username"
+    ).notNull(),
+
+    currentTeam: text(
+      "current_team"
+    ),
+
+    callsign: text(
+      "callsign"
+    ),
+
+    firstSeenAt: timestamp(
+      "first_seen_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+
+    lastSeenAt: timestamp(
+      "last_seen_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+
+    totalSeconds: integer(
+      "total_seconds"
+    )
+      .notNull()
+      .default(0),
+
+    sessionsAttended: integer(
+      "sessions_attended"
+    )
+      .notNull()
+      .default(0),
+
+    joinCount: integer(
+      "join_count"
+    )
+      .notNull()
+      .default(0),
+
+    updatedAt: timestamp(
+      "updated_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const erlcPlayerAttendance =
+  pgTable(
+    "erlc_player_attendance",
+    {
+      id: text(
+        "id"
+      ).primaryKey(),
+
+      guildId: text(
+        "guild_id"
+      ).notNull(),
+
+      sessionId: text(
+        "session_id"
+      ).notNull(),
+
+      userId: text(
+        "user_id"
+      ).notNull(),
+
+      username: text(
+        "username"
+      ).notNull(),
+
+      team: text(
+        "team"
+      ),
+
+      callsign: text(
+        "callsign"
+      ),
+
+      joinedAt: timestamp(
+        "joined_at",
+        {
+          withTimezone: true,
+        }
+      )
+        .notNull()
+        .defaultNow(),
+
+      lastSeenAt: timestamp(
+        "last_seen_at",
+        {
+          withTimezone: true,
+        }
+      )
+        .notNull()
+        .defaultNow(),
+
+      leftAt: timestamp(
+        "left_at",
+        {
+          withTimezone: true,
+        }
+      ),
+
+      createdAt: timestamp(
+        "created_at",
+        {
+          withTimezone: true,
+        }
+      )
+        .notNull()
+        .defaultNow(),
+    }
+  );
