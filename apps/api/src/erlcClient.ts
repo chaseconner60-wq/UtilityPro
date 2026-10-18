@@ -2,60 +2,55 @@ const DEFAULT_ERLC_API =
   "https://api.erlc.gg";
 
 type RawErlcServer = {
-  Name?: string;
-  name?: string;
+  Name?: unknown;
+  name?: unknown;
 
-  JoinKey?: string;
-  joinKey?: string;
+  JoinKey?: unknown;
+  joinKey?: unknown;
+  JoinCode?: unknown;
+  joinCode?: unknown;
 
-  CurrentPlayers?: number;
-  currentPlayers?: number;
+  CurrentPlayers?: unknown;
+  currentPlayers?: unknown;
 
-  MaxPlayers?: number;
-  maxPlayers?: number;
+  MaxPlayers?: unknown;
+  maxPlayers?: unknown;
 
-  Players?: unknown[];
-  players?: unknown[];
+  Players?: unknown;
+  players?: unknown;
 
-  Queue?: unknown[];
-  queue?: unknown[];
+  Queue?: unknown;
+  queue?: unknown;
 
   Staff?: unknown;
   staff?: unknown;
 
-  EmergencyCalls?: unknown[];
-  emergencyCalls?: unknown[];
+  EmergencyCalls?: unknown;
+  emergencyCalls?: unknown;
 
-  Vehicles?: unknown[];
-  vehicles?: unknown[];
+  Vehicles?: unknown;
+  vehicles?: unknown;
 
   [key: string]: unknown;
 };
 
 export type ErlcSnapshot = {
   name: string | null;
-
   joinCode: string | null;
 
   currentPlayers: number;
-
   maxPlayers: number;
 
   players: unknown[];
-
   queue: unknown[];
-
   staff: unknown;
-
   emergencyCalls: unknown[];
-
   vehicles: unknown[];
 
-  raw: RawErlcServer;
+  lastCheckedAt: string;
 };
 
-export class ErlcApiError
-  extends Error {
+export class ErlcApiError extends Error {
   status: number;
 
   constructor(
@@ -63,12 +58,132 @@ export class ErlcApiError
     status: number
   ) {
     super(message);
-    this.status = status;
+
+    this.name =
+      "ErlcApiError";
+
+    this.status =
+      status;
   }
 }
 
+function textValue(
+  ...values: unknown[]
+) {
+  for (
+    const value of values
+  ) {
+    if (
+      typeof value ===
+        "string" &&
+      value.trim()
+    ) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
+function numberValue(
+  ...values: unknown[]
+) {
+  for (
+    const value of values
+  ) {
+    if (
+      typeof value ===
+        "number" &&
+      Number.isFinite(value)
+    ) {
+      return value;
+    }
+
+    if (
+      typeof value ===
+        "string" &&
+      value.trim()
+    ) {
+      const parsed =
+        Number(value);
+
+      if (
+        Number.isFinite(
+          parsed
+        )
+      ) {
+        return parsed;
+      }
+    }
+  }
+
+  return 0;
+}
+
+function arrayValue(
+  ...values: unknown[]
+): unknown[] {
+  for (
+    const value of values
+  ) {
+    if (
+      Array.isArray(value)
+    ) {
+      return value;
+    }
+  }
+
+  return [];
+}
+
+async function errorMessage(
+  response: Response
+) {
+  let message =
+    response.statusText ||
+    "ER:LC request failed.";
+
+  try {
+    const raw =
+      (await response.json()) as Record<
+        string,
+        unknown
+      >;
+
+    const candidate =
+      raw.message ??
+      raw.Message ??
+      raw.error ??
+      raw.Error;
+
+    if (
+      typeof candidate ===
+        "string" &&
+      candidate.trim()
+    ) {
+      message =
+        candidate.trim();
+    }
+  } catch {
+    try {
+      const text =
+        await response.text();
+
+      if (text.trim()) {
+        message =
+          text.trim();
+      }
+    } catch {
+      // Keep fallback.
+    }
+  }
+
+  return message;
+}
+
 export async function fetchErlcSnapshot(
-  serverKey: string
+  serverKey: string,
+  includeLiveData = false
 ): Promise<ErlcSnapshot> {
   const apiBase =
     (
@@ -77,67 +192,109 @@ export async function fetchErlcSnapshot(
       DEFAULT_ERLC_API
     ).replace(/\/$/, "");
 
-  const response =
-    await fetch(
-      `${apiBase}/v2/server`,
-      {
-        method: "GET",
+  const params =
+    new URLSearchParams();
 
-        headers: {
-          "Server-Key":
-            serverKey,
-
-          Accept:
-            "application/json",
-        },
-
-        signal:
-          AbortSignal.timeout(
-            10000
-          ),
-      }
+  if (includeLiveData) {
+    params.set(
+      "Players",
+      "true"
     );
 
+    params.set(
+      "Staff",
+      "true"
+    );
+
+    params.set(
+      "Queue",
+      "true"
+    );
+
+    params.set(
+      "Vehicles",
+      "true"
+    );
+
+    params.set(
+      "EmergencyCalls",
+      "true"
+    );
+  }
+
+  const query =
+    params.toString();
+
+  const url =
+    `${apiBase}/v2/server${
+      query
+        ? `?${query}`
+        : ""
+    }`;
+
+  let response: Response;
+
+  try {
+    response =
+      await fetch(
+        url,
+        {
+          method:
+            "GET",
+
+          headers: {
+            "Server-Key":
+              serverKey,
+
+            Accept:
+              "application/json",
+          },
+
+          signal:
+            AbortSignal.timeout(
+              10000
+            ),
+        }
+      );
+  } catch (error) {
+    throw new ErlcApiError(
+      error instanceof Error
+        ? `Unable to reach ER:LC: ${error.message}`
+        : "Unable to reach ER:LC.",
+      502
+    );
+  }
+
   if (!response.ok) {
-    let message =
-      `ER:LC returned HTTP ${response.status}.`;
+    const message =
+      await errorMessage(
+        response
+      );
 
-    try {
-      const body =
-        await response.json() as {
-          message?: string;
-          Message?: string;
-          error?: string;
-          Error?: string;
-        };
-
-      message =
-        body.message ||
-        body.Message ||
-        body.error ||
-        body.Error ||
-        message;
-    } catch {
-      // Keep safe generic message.
+    if (
+      response.status ===
+        401 ||
+      response.status ===
+        403
+    ) {
+      throw new ErlcApiError(
+        `ER:LC authentication failed (${response.status}): ${message}`,
+        response.status
+      );
     }
 
     if (
-      response.status === 401 ||
-      response.status === 403
+      response.status ===
+      429
     ) {
-      message =
-        `ER:LC authentication failed (${response.status}): ${message}`;
-    }
-
-    if (
-      response.status === 429
-    ) {
-      message =
-        "ER:LC rate limit reached. Try again shortly.";
+      throw new ErlcApiError(
+        `ER:LC rate limit reached: ${message}`,
+        429
+      );
     }
 
     throw new ErlcApiError(
-      message,
+      `ER:LC request failed (${response.status}): ${message}`,
       response.status
     );
   }
@@ -145,118 +302,70 @@ export async function fetchErlcSnapshot(
   const raw =
     (await response.json()) as RawErlcServer;
 
-  const players =
-    Array.isArray(
-      raw.Players
-    )
-      ? raw.Players
-      : Array.isArray(
-          raw.players
-        )
-        ? raw.players
-        : [];
-
-  const queue =
-    Array.isArray(
-      raw.Queue
-    )
-      ? raw.Queue
-      : Array.isArray(
-          raw.queue
-        )
-        ? raw.queue
-        : [];
-
-  const emergencyCalls =
-    Array.isArray(
-      raw.EmergencyCalls
-    )
-      ? raw.EmergencyCalls
-      : Array.isArray(
-          raw.emergencyCalls
-        )
-        ? raw.emergencyCalls
-        : [];
-
-  const vehicles =
-    Array.isArray(
-      raw.Vehicles
-    )
-      ? raw.Vehicles
-      : Array.isArray(
-          raw.vehicles
-        )
-        ? raw.vehicles
-        : [];
-
   return {
     name:
-      typeof raw.Name ===
-      "string"
-        ? raw.Name
-        : typeof raw.name ===
-            "string"
-          ? raw.name
-          : null,
+      textValue(
+        raw.Name,
+        raw.name
+      ),
 
     joinCode:
-      typeof raw.JoinKey ===
-      "string"
-        ? raw.JoinKey
-        : typeof raw.joinKey ===
-            "string"
-          ? raw.joinKey
-          : null,
+      textValue(
+        raw.JoinKey,
+        raw.joinKey,
+        raw.JoinCode,
+        raw.joinCode
+      ),
 
     currentPlayers:
-      typeof raw.CurrentPlayers ===
-      "number"
-        ? raw.CurrentPlayers
-        : typeof raw.currentPlayers ===
-            "number"
-          ? raw.currentPlayers
-          : players.length,
+      numberValue(
+        raw.CurrentPlayers,
+        raw.currentPlayers
+      ),
 
     maxPlayers:
-      typeof raw.MaxPlayers ===
-      "number"
-        ? raw.MaxPlayers
-        : typeof raw.maxPlayers ===
-            "number"
-          ? raw.maxPlayers
-          : 0,
+      numberValue(
+        raw.MaxPlayers,
+        raw.maxPlayers
+      ),
 
-    players,
-    queue,
+    players:
+      arrayValue(
+        raw.Players,
+        raw.players
+      ),
+
+    queue:
+      arrayValue(
+        raw.Queue,
+        raw.queue
+      ),
 
     staff:
       raw.Staff ??
       raw.staff ??
       null,
 
-    emergencyCalls,
-    vehicles,
-    raw,
+    emergencyCalls:
+      arrayValue(
+        raw.EmergencyCalls,
+        raw.emergencyCalls
+      ),
+
+    vehicles:
+      arrayValue(
+        raw.Vehicles,
+        raw.vehicles
+      ),
+
+    lastCheckedAt:
+      new Date()
+        .toISOString(),
   };
 }
 
 export function getInternalServerId(
-  serverKey: string
+  _serverKey: string
 ) {
-  const pieces =
-    serverKey
-      .trim()
-      .split("-");
-
-  if (
-    pieces.length < 2
-  ) {
-    return null;
-  }
-
-  return (
-    pieces[
-      pieces.length - 1
-    ] || null
-  );
+  return null;
 }

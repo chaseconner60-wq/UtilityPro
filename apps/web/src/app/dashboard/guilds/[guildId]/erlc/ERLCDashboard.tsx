@@ -4,6 +4,8 @@ import ERLCConnectionCard, {
   useERLCConnection,
 } from "./ERLCConnection";
 
+import ERLCLiveServer from "./ERLCLiveServer";
+
 import {
   useState,
 } from "react";
@@ -405,12 +407,16 @@ export default function ERLCDashboard({
 
             {section ===
               "live" && (
-              <PlaceholderPage
-                eyebrow="Operations"
-                title="Live Server"
-                description="Live ER:LC player, queue and server activity will appear here."
-                icon="●"
+              <ERLCLiveServer
                 connected={connected}
+                live={live}
+                loading={erlcLoading}
+                error={erlcError}
+                refresh={() =>
+                  void refreshERLC(
+                    true
+                  )
+                }
               />
             )}
 
