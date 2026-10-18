@@ -35,4 +35,6 @@ export {
   erlcManagementSettings,
   erlcStaffProfiles,
   erlcDepartmentMappings,
+  erlcManagedSessions,
+  erlcManagedSessionParticipants,
 } from "./schema.js";

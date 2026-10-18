@@ -9,6 +9,7 @@ import ERLCSessions from "./ERLCSessions";
 import ERLCPlayers from "./ERLCPlayers";
 import ERLCOperations from "./ERLCOperations";
 import ERLCManagement from "./ERLCManagement";
+import ERLCSessionCommand from "./ERLCSessionCommand";
 
 import {
   useState,
@@ -16,6 +17,7 @@ import {
 
 type Section =
   | "overview"
+  | "command"
   | "live"
   | "sessions"
   | "players"
@@ -74,6 +76,12 @@ export default function ERLCDashboard({
           label: "Overview",
           detail: "RP operations center",
           icon: "◫",
+        },
+        {
+          id: "command",
+          label: "Session Command",
+          detail: "Run patrol sessions",
+          icon: "▶",
         },
         {
           id: "live",
@@ -413,6 +421,14 @@ export default function ERLCDashboard({
                     "live"
                   )
                 }
+              />
+            )}
+
+            {section ===
+              "command" && (
+              <ERLCSessionCommand
+                guildId={guildId}
+                connected={connected}
               />
             )}
 

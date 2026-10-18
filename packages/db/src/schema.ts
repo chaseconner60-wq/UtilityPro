@@ -1006,3 +1006,170 @@ export const erlcDepartmentMappings = pgTable(
       .defaultNow(),
   }
 );
+
+export const erlcManagedSessions = pgTable(
+  "erlc_managed_sessions",
+  {
+    id: text("id").primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    status: text(
+      "status"
+    )
+      .notNull()
+      .default("scheduled"),
+
+    title: text(
+      "title"
+    ).notNull(),
+
+    sessionType: text(
+      "session_type"
+    )
+      .notNull()
+      .default("patrol"),
+
+    hostUserId: text(
+      "host_user_id"
+    ).notNull(),
+
+    hostUsername: text(
+      "host_username"
+    ).notNull(),
+
+    coHosts: jsonb(
+      "co_hosts"
+    )
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+
+    minimumAttendanceSeconds:
+      integer(
+        "minimum_attendance_seconds"
+      )
+        .notNull()
+        .default(900),
+
+    notes: text(
+      "notes"
+    ),
+
+    scheduledFor: timestamp(
+      "scheduled_for",
+      {
+        withTimezone: true,
+      }
+    ),
+
+    startedAt: timestamp(
+      "started_at",
+      {
+        withTimezone: true,
+      }
+    ),
+
+    endedAt: timestamp(
+      "ended_at",
+      {
+        withTimezone: true,
+      }
+    ),
+
+    createdBy: text(
+      "created_by"
+    ),
+
+    createdAt: timestamp(
+      "created_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp(
+      "updated_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const erlcManagedSessionParticipants =
+  pgTable(
+    "erlc_managed_session_participants",
+    {
+      id: text(
+        "id"
+      ).primaryKey(),
+
+      sessionId: text(
+        "session_id"
+      ).notNull(),
+
+      guildId: text(
+        "guild_id"
+      ).notNull(),
+
+      userId: text(
+        "user_id"
+      ).notNull(),
+
+      username: text(
+        "username"
+      ).notNull(),
+
+      department: text(
+        "department"
+      ),
+
+      durationSeconds: integer(
+        "duration_seconds"
+      )
+        .notNull()
+        .default(0),
+
+      qualified: boolean(
+        "qualified"
+      )
+        .notNull()
+        .default(false),
+
+      isStaff: boolean(
+        "is_staff"
+      )
+        .notNull()
+        .default(false),
+
+      firstSeenAt: timestamp(
+        "first_seen_at",
+        {
+          withTimezone: true,
+        }
+      ),
+
+      lastSeenAt: timestamp(
+        "last_seen_at",
+        {
+          withTimezone: true,
+        }
+      ),
+
+      createdAt: timestamp(
+        "created_at",
+        {
+          withTimezone: true,
+        }
+      )
+        .notNull()
+        .defaultNow(),
+    }
+  );

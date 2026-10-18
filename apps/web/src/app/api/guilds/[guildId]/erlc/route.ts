@@ -409,6 +409,21 @@ export async function GET(
       "userId"
     );
 
+  const commandSessions =
+    url.searchParams.get(
+      "commandSessions"
+    ) === "1";
+
+  const commandActive =
+    url.searchParams.get(
+      "commandActive"
+    ) === "1";
+
+  const commandSessionId =
+    url.searchParams.get(
+      "commandSessionId"
+    );
+
   const allowedOperations =
     new Set([
       "staff",
@@ -418,11 +433,17 @@ export async function GET(
     ]);
 
   const target =
-    management
-      ? managementUserId
-        ? `${apiUrl}/internal/erlc/${guildId}/management/player/${encodeURIComponent(managementUserId)}`
-        : `${apiUrl}/internal/erlc/${guildId}/management`
-      : operationsView &&
+    commandActive
+      ? `${apiUrl}/internal/erlc/${guildId}/command-sessions/active`
+      : commandSessionId
+        ? `${apiUrl}/internal/erlc/${guildId}/command-sessions/${encodeURIComponent(commandSessionId)}`
+        : commandSessions
+          ? `${apiUrl}/internal/erlc/${guildId}/command-sessions`
+          : management
+            ? managementUserId
+              ? `${apiUrl}/internal/erlc/${guildId}/management/player/${encodeURIComponent(managementUserId)}`
+              : `${apiUrl}/internal/erlc/${guildId}/management`
+            : operationsView &&
         allowedOperations.has(
           operationsView
         )
@@ -676,6 +697,51 @@ export async function POST(
       undefined;
 
   if (
+    action ===
+    "command-create"
+  ) {
+    target =
+      `${apiUrl}/internal/erlc/${guildId}/command-sessions`;
+
+    method =
+      "POST";
+
+    payload =
+      body.session;
+  } else if (
+    action ===
+      "command-start" ||
+    action ===
+      "command-end" ||
+    action ===
+      "command-cancel"
+  ) {
+    if (
+      !body.sessionId
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "sessionId is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const commandAction =
+      action.replace(
+        "command-",
+        ""
+      );
+
+    target =
+      `${apiUrl}/internal/erlc/${guildId}/command-sessions/${encodeURIComponent(body.sessionId)}/${commandAction}`;
+
+    method =
+      "POST";
+  } else if (
     action ===
     "settings"
   ) {

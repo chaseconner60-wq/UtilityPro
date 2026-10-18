@@ -120,6 +120,13 @@
       "when": 1792342542242,
       "tag": "0016_talented_ares",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792346077474,
+      "tag": "0017_parallel_stone_men",
+      "breakpoints": true
     }
   ]
 }
