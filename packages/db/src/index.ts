@@ -32,4 +32,7 @@ export {
   erlcSessions,
   erlcPlayers,
   erlcPlayerAttendance,
+  erlcManagementSettings,
+  erlcStaffProfiles,
+  erlcDepartmentMappings,
 } from "./schema.js";

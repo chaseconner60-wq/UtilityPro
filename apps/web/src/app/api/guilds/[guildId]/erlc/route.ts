@@ -399,6 +399,16 @@ export async function GET(
       "view"
     );
 
+  const management =
+    url.searchParams.get(
+      "management"
+    ) === "1";
+
+  const managementUserId =
+    url.searchParams.get(
+      "userId"
+    );
+
   const allowedOperations =
     new Set([
       "staff",
@@ -408,12 +418,16 @@ export async function GET(
     ]);
 
   const target =
-    operationsView &&
-    allowedOperations.has(
-      operationsView
-    )
-      ? `${apiUrl}/internal/erlc/${guildId}/operations/${operationsView}`
-      : history
+    management
+      ? managementUserId
+        ? `${apiUrl}/internal/erlc/${guildId}/management/player/${encodeURIComponent(managementUserId)}`
+        : `${apiUrl}/internal/erlc/${guildId}/management`
+      : operationsView &&
+        allowedOperations.has(
+          operationsView
+        )
+        ? `${apiUrl}/internal/erlc/${guildId}/operations/${operationsView}`
+        : history
         ? `${apiUrl}/internal/erlc/${guildId}/player-history${
           historyUserId
             ? `?userId=${encodeURIComponent(historyUserId)}`
@@ -580,6 +594,236 @@ export async function DELETE(
 
   const data =
     await response.json();
+
+  return NextResponse.json(
+    data,
+    {
+      status:
+        response.status,
+    }
+  );
+}
+
+export async function POST(
+  request: Request,
+  {
+    params,
+  }: {
+    params: Promise<{
+      guildId: string;
+    }>;
+  }
+) {
+  const {
+    guildId,
+  } = await params;
+
+  const auth =
+    await authorize(
+      guildId
+    );
+
+  if (!auth.ok) {
+    return NextResponse.json(
+      {
+        error:
+          auth.reason,
+      },
+      {
+        status:
+          auth.status,
+      }
+    );
+  }
+
+  let body: any;
+
+  try {
+    body =
+      await request.json();
+  } catch {
+    return NextResponse.json(
+      {
+        error:
+          "Invalid request body.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  const action =
+    String(
+      body?.action ??
+      ""
+    );
+
+  const {
+    apiUrl,
+    secret,
+  } = config();
+
+  let target:
+    string | null =
+      null;
+
+  let method =
+    "POST";
+
+  let payload:
+    unknown =
+      undefined;
+
+  if (
+    action ===
+    "settings"
+  ) {
+    target =
+      `${apiUrl}/internal/erlc/${guildId}/management/settings`;
+
+    method =
+      "PATCH";
+
+    payload =
+      body.settings;
+  } else if (
+    action ===
+    "staff-save"
+  ) {
+    if (!body.userId) {
+      return NextResponse.json(
+        {
+          error:
+            "userId is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/erlc/${guildId}/management/staff/${encodeURIComponent(body.userId)}`;
+
+    method =
+      "PUT";
+
+    payload =
+      body.profile;
+  } else if (
+    action ===
+    "staff-delete"
+  ) {
+    if (!body.userId) {
+      return NextResponse.json(
+        {
+          error:
+            "userId is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/erlc/${guildId}/management/staff/${encodeURIComponent(body.userId)}`;
+
+    method =
+      "DELETE";
+  } else if (
+    action ===
+    "department-save"
+  ) {
+    target =
+      `${apiUrl}/internal/erlc/${guildId}/management/departments`;
+
+    method =
+      "PUT";
+
+    payload =
+      body.mapping;
+  } else if (
+    action ===
+    "department-delete"
+  ) {
+    if (!body.mappingId) {
+      return NextResponse.json(
+        {
+          error:
+            "mappingId is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/erlc/${guildId}/management/departments/${encodeURIComponent(body.mappingId)}`;
+
+    method =
+      "DELETE";
+  }
+
+  if (!target) {
+    return NextResponse.json(
+      {
+        error:
+          "Unknown management action.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  const response =
+    await fetch(
+      target,
+      {
+        method,
+
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          "x-utilityx-internal-secret":
+            secret,
+        },
+
+        body:
+          payload !== undefined
+            ? JSON.stringify(
+                payload
+              )
+            : undefined,
+
+        cache:
+          "no-store",
+      }
+    );
+
+  const text =
+    await response.text();
+
+  let data:
+    unknown = {};
+
+  if (text) {
+    try {
+      data =
+        JSON.parse(
+          text
+        );
+    } catch {
+      data = {
+        error:
+          text,
+      };
+    }
+  }
 
   return NextResponse.json(
     data,

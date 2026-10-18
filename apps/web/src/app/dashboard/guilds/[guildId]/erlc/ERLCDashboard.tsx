@@ -8,6 +8,7 @@ import ERLCLiveServer from "./ERLCLiveServer";
 import ERLCSessions from "./ERLCSessions";
 import ERLCPlayers from "./ERLCPlayers";
 import ERLCOperations from "./ERLCOperations";
+import ERLCManagement from "./ERLCManagement";
 
 import {
   useState,
@@ -22,6 +23,7 @@ type Section =
   | "departments"
   | "calls"
   | "analytics"
+  | "management"
   | "settings";
 
 export default function ERLCDashboard({
@@ -136,6 +138,12 @@ export default function ERLCDashboard({
       label: "Configuration",
 
       items: [
+        {
+          id: "management",
+          label: "RP Management",
+          detail: "Staff & activity rules",
+          icon: "◆",
+        },
         {
           id: "settings",
           label: "ER:LC Settings",
@@ -472,6 +480,14 @@ export default function ERLCDashboard({
                 guildId={guildId}
                 connected={connected}
                 mode="analytics"
+              />
+            )}
+
+            {section ===
+              "management" && (
+              <ERLCManagement
+                guildId={guildId}
+                connected={connected}
               />
             )}
 

@@ -864,3 +864,145 @@ export const erlcPlayerAttendance =
         .defaultNow(),
     }
   );
+
+export const erlcManagementSettings = pgTable(
+  "erlc_management_settings",
+  {
+    guildId: text(
+      "guild_id"
+    ).primaryKey(),
+
+    minimumTrackedSeconds: integer(
+      "minimum_tracked_seconds"
+    )
+      .notNull()
+      .default(3600),
+
+    minimumSessions: integer(
+      "minimum_sessions"
+    )
+      .notNull()
+      .default(2),
+
+    inactivityDays: integer(
+      "inactivity_days"
+    )
+      .notNull()
+      .default(14),
+
+    promotionReadySeconds: integer(
+      "promotion_ready_seconds"
+    )
+      .notNull()
+      .default(10800),
+
+    promotionReadySessions: integer(
+      "promotion_ready_sessions"
+    )
+      .notNull()
+      .default(5),
+
+    updatedAt: timestamp(
+      "updated_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const erlcStaffProfiles = pgTable(
+  "erlc_staff_profiles",
+  {
+    id: text(
+      "id"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    userId: text(
+      "user_id"
+    ).notNull(),
+
+    username: text(
+      "username"
+    ).notNull(),
+
+    isStaff: boolean(
+      "is_staff"
+    )
+      .notNull()
+      .default(true),
+
+    role: text(
+      "role"
+    ),
+
+    department: text(
+      "department"
+    ),
+
+    rank: text(
+      "rank"
+    ),
+
+    notes: text(
+      "notes"
+    ),
+
+    activityExempt: boolean(
+      "activity_exempt"
+    )
+      .notNull()
+      .default(false),
+
+    updatedAt: timestamp(
+      "updated_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const erlcDepartmentMappings = pgTable(
+  "erlc_department_mappings",
+  {
+    id: text(
+      "id"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    sourceTeam: text(
+      "source_team"
+    ).notNull(),
+
+    departmentName: text(
+      "department_name"
+    ).notNull(),
+
+    isStaffDepartment: boolean(
+      "is_staff_department"
+    )
+      .notNull()
+      .default(false),
+
+    updatedAt: timestamp(
+      "updated_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);

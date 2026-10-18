@@ -223,6 +223,36 @@ async function trackGuild(
       );
 
     if (!active) {
+      const [previousAttendance] =
+        await db
+          .select({
+            id:
+              erlcPlayerAttendance.id,
+          })
+          .from(
+            erlcPlayerAttendance
+          )
+          .where(
+            and(
+              eq(
+                erlcPlayerAttendance.guildId,
+                connection.guildId
+              ),
+              eq(
+                erlcPlayerAttendance.sessionId,
+                session.id
+              ),
+              eq(
+                erlcPlayerAttendance.userId,
+                userId
+              )
+            )
+          )
+          .limit(1);
+
+      const firstTimeThisSession =
+        !previousAttendance;
+
       await db
         .insert(
           erlcPlayerAttendance
@@ -283,7 +313,11 @@ async function trackGuild(
             sessionsAttended:
               existingPlayer
                 .sessionsAttended +
-              1,
+              (
+                firstTimeThisSession
+                  ? 1
+                  : 0
+              ),
 
             updatedAt:
               now,

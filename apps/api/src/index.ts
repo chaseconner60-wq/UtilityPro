@@ -26,6 +26,9 @@ import {
 import {
   getErlcOperationsView,
 } from "./erlcOperations.js";
+import {
+  registerErlcManagementRoutes,
+} from "./erlcManagementRoutes.js";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import { and, desc, eq, sql } from "drizzle-orm";
@@ -2107,6 +2110,8 @@ app.get<{
     };
   }
 );
+
+registerErlcManagementRoutes(app);
 
 startErlcSessionTracker();
 startErlcPlayerTracker();
