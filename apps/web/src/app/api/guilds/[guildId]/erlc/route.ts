@@ -16,24 +16,77 @@ type DiscordGuild = {
   permissions: string;
 };
 
+type AuthSuccess = {
+  ok: true;
+};
+
+type AuthFailure = {
+  ok: false;
+  reason: string;
+  status: number;
+};
+
+type AuthResult =
+  | AuthSuccess
+  | AuthFailure;
+
+type CachedAuth = {
+  result: AuthResult;
+  expiresAt: number;
+};
+
 const ADMINISTRATOR =
   BigInt("8");
 
 const MANAGE_GUILD =
   BigInt("32");
 
+const AUTH_CACHE_TTL_MS =
+  5 * 60 * 1000;
+
+const authCache =
+  new Map<string, CachedAuth>();
+
+function getCachedAuth(
+  key: string
+): AuthResult | null {
+  const cached =
+    authCache.get(key);
+
+  if (!cached) {
+    return null;
+  }
+
+  if (
+    Date.now() >
+    cached.expiresAt
+  ) {
+    authCache.delete(key);
+    return null;
+  }
+
+  return cached.result;
+}
+
+function setCachedAuth(
+  key: string,
+  result: AuthResult,
+  ttlMs = AUTH_CACHE_TTL_MS
+) {
+  authCache.set(
+    key,
+    {
+      result,
+      expiresAt:
+        Date.now() +
+        ttlMs,
+    }
+  );
+}
+
 async function authorize(
   guildId: string
-): Promise<
-  | {
-      ok: true;
-    }
-  | {
-      ok: false;
-      reason: string;
-      status: number;
-    }
-> {
+): Promise<AuthResult> {
   const cookieStore =
     await cookies();
 
@@ -78,16 +131,21 @@ async function authorize(
     };
   }
 
-  const discordBase =
-    [
-      "https:",
-      "",
-      "discord.com",
-    ].join("/");
+  const cacheKey =
+    `${guildId}:${session.accessToken}`;
+
+  const cached =
+    getCachedAuth(
+      cacheKey
+    );
+
+  if (cached) {
+    return cached;
+  }
 
   const response =
     await fetch(
-      `${discordBase}/api/users/@me/guilds`,
+      "https://discord.com/api/users/@me/guilds",
       {
         headers: {
           Authorization:
@@ -98,6 +156,73 @@ async function authorize(
           "no-store",
       }
     );
+
+  if (
+    response.status === 429
+  ) {
+    let retryAfterMs =
+      60_000;
+
+    try {
+      const body =
+        await response.json();
+
+      if (
+        typeof body.retry_after ===
+          "number"
+      ) {
+        retryAfterMs =
+          Math.max(
+            1_000,
+            Math.ceil(
+              body.retry_after *
+                1000
+            )
+          );
+      }
+    } catch {
+      const header =
+        response.headers.get(
+          "retry-after"
+        );
+
+      if (header) {
+        const seconds =
+          Number(header);
+
+        if (
+          Number.isFinite(
+            seconds
+          )
+        ) {
+          retryAfterMs =
+            Math.max(
+              1_000,
+              Math.ceil(
+                seconds *
+                  1000
+              )
+            );
+        }
+      }
+    }
+
+    const result:
+      AuthFailure = {
+        ok: false,
+        reason:
+          "Discord is temporarily rate-limiting UtilityX. Please wait a moment and try again.",
+        status: 429,
+      };
+
+    setCachedAuth(
+      cacheKey,
+      result,
+      retryAfterMs
+    );
+
+    return result;
+  }
 
   if (!response.ok) {
     return {
@@ -118,12 +243,20 @@ async function authorize(
     );
 
   if (!guild) {
-    return {
-      ok: false,
-      reason:
-        "Discord did not return this server in your manageable server list.",
-      status: 403,
-    };
+    const result:
+      AuthFailure = {
+        ok: false,
+        reason:
+          "Discord did not return this server in your manageable server list.",
+        status: 403,
+      };
+
+    setCachedAuth(
+      cacheKey,
+      result
+    );
+
+    return result;
   }
 
   const permissions =
@@ -143,17 +276,33 @@ async function authorize(
     ) === MANAGE_GUILD;
 
   if (!allowed) {
-    return {
-      ok: false,
-      reason:
-        "You do not currently have Owner, Administrator, or Manage Server permission for this Discord server.",
-      status: 403,
-    };
+    const result:
+      AuthFailure = {
+        ok: false,
+        reason:
+          "You do not currently have Owner, Administrator, or Manage Server permission for this Discord server.",
+        status: 403,
+      };
+
+    setCachedAuth(
+      cacheKey,
+      result
+    );
+
+    return result;
   }
 
-  return {
-    ok: true,
-  };
+  const result:
+    AuthSuccess = {
+      ok: true,
+    };
+
+  setCachedAuth(
+    cacheKey,
+    result
+  );
+
+  return result;
 }
 
 function config() {
