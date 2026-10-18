@@ -154,7 +154,7 @@ export async function GET(
     return NextResponse.json(
       {
         error:
-          "Unauthorized",
+          "UtilityX dashboard authorization failed. Please sign in to Discord again and verify you still have Manage Server permission.",
       },
       {
         status: 401,
@@ -225,7 +225,7 @@ export async function PUT(
     return NextResponse.json(
       {
         error:
-          "Unauthorized",
+          "UtilityX dashboard authorization failed. Please sign in to Discord again and verify you still have Manage Server permission.",
       },
       {
         status: 401,
@@ -297,7 +297,7 @@ export async function DELETE(
     return NextResponse.json(
       {
         error:
-          "Unauthorized",
+          "UtilityX dashboard authorization failed. Please sign in to Discord again and verify you still have Manage Server permission.",
       },
       {
         status: 401,
