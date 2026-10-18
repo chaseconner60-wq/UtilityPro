@@ -127,6 +127,13 @@
       "when": 1792346077474,
       "tag": "0017_parallel_stone_men",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792346874267,
+      "tag": "0018_cynical_rogue",
+      "breakpoints": true
     }
   ]
 }

@@ -32,6 +32,9 @@ import {
 import {
   registerErlcManagedSessionRoutes,
 } from "./erlcManagedSessionRoutes.js";
+import {
+  registerApplicationRoutes,
+} from "./applicationRoutes.js";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import { and, desc, eq, sql } from "drizzle-orm";
@@ -2116,6 +2119,7 @@ app.get<{
 
 registerErlcManagementRoutes(app);
 registerErlcManagedSessionRoutes(app);
+registerApplicationRoutes(app);
 
 startErlcSessionTracker();
 startErlcPlayerTracker();

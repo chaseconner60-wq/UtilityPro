@@ -37,4 +37,10 @@ export {
   erlcDepartmentMappings,
   erlcManagedSessions,
   erlcManagedSessionParticipants,
+  applicationPortals,
+  applicationForms,
+  applicationQuestions,
+  applicationSubmissions,
+  applicationAnswers,
+  applicationReviews,
 } from "./schema.js";
