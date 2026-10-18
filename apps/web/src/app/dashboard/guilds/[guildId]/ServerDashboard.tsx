@@ -1,5 +1,7 @@
 "use client";
 
+import HealthPanel from "./HealthPanel";
+
 import {
   useEffect,
   useState,
@@ -7,6 +9,7 @@ import {
 
 type Section =
   | "overview"
+  | "health"
   | "general"
   | "welcome"
   | "tickets"
@@ -306,6 +309,12 @@ export default function ServerDashboard({
           label: "Overview",
           detail: "Server status",
           icon: "◫",
+        },
+        {
+          id: "health",
+          label: "Health",
+          detail: "Community intelligence",
+          icon: "♥",
         },
         {
           id: "general",
@@ -722,6 +731,16 @@ export default function ServerDashboard({
                   </div>
                 </div>
               </>
+            )}
+
+            {section ===
+              "health" && (
+              <HealthPanel
+                guildId={guildId}
+                onNavigate={(next) =>
+                  setSection(next)
+                }
+              />
             )}
 
             {section ===
