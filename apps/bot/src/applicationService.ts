@@ -325,3 +325,99 @@ export async function sendInterviewNotification(
     sent: true,
   };
 }
+
+type ApplicantChannelNotificationPayload = {
+  guildId: string;
+  channelId: string;
+  applicantUserId: string;
+  title: string;
+  message: string;
+  applicationCode?: string | null;
+  formName?: string | null;
+};
+
+export async function postApplicantChannelNotification(
+  client: Client,
+  payload: ApplicantChannelNotificationPayload
+) {
+  const guild =
+    await client.guilds.fetch(
+      payload.guildId
+    );
+
+  const channel =
+    await guild.channels.fetch(
+      payload.channelId
+    );
+
+  if (
+    !channel ||
+    channel.type !==
+      ChannelType.GuildText
+  ) {
+    throw new Error(
+      "Applicant notification channel is not a text channel."
+    );
+  }
+
+  const embed =
+    new EmbedBuilder()
+      .setTitle(
+        payload.title
+      )
+      .setDescription(
+        payload.message
+      )
+      .setFooter({
+        text:
+          "UtilityX Applications",
+      })
+      .setTimestamp();
+
+  if (
+    payload.formName
+  ) {
+    embed.addFields({
+      name:
+        "Application",
+      value:
+        payload.formName,
+      inline:
+        true,
+    });
+  }
+
+  if (
+    payload.applicationCode
+  ) {
+    embed.addFields({
+      name:
+        "Application ID",
+      value:
+        payload.applicationCode,
+      inline:
+        true,
+    });
+  }
+
+  await (
+    channel as TextChannel
+  ).send({
+    content:
+      `<@${payload.applicantUserId}>`,
+
+    embeds: [
+      embed,
+    ],
+
+    allowedMentions: {
+      users: [
+        payload.applicantUserId,
+      ],
+    },
+  });
+
+  return {
+    sent: true,
+  };
+}

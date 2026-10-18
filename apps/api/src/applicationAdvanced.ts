@@ -210,6 +210,7 @@ export async function updateAdvancedApplicationSettings(
     scoringEnabled?: boolean;
     smartReviewEnabled?: boolean;
     applicantDmEnabled?: boolean;
+    applicantNotificationChannelId?: string | null;
     submitMessage?: string | null;
     interviewMessage?: string | null;
     acceptedMessage?: string | null;
@@ -328,6 +329,18 @@ export async function updateAdvancedApplicationSettings(
 
         applicantDmEnabled:
           input.applicantDmEnabled,
+
+        applicantNotificationChannelId:
+          input.applicantNotificationChannelId ===
+            undefined
+            ? undefined
+            : input.applicantNotificationChannelId ===
+                null
+              ? null
+              : cleanText(
+                  input.applicantNotificationChannelId,
+                  40
+                ),
 
         submitMessage:
           input.submitMessage ===

@@ -5,6 +5,7 @@ import type {
 
 import {
   createApplicationForm,
+  deleteApplicationForm,
   getApplicationForm,
   getApplicationPortal,
   getApplicationSubmission,
@@ -348,6 +349,45 @@ export function registerApplicationRoutes(
               error instanceof Error
                 ? error.message
                 : "Application not found.",
+          });
+      }
+    }
+  );
+
+  app.delete<{
+    Params: {
+      guildId: string;
+      formId: string;
+    };
+  }>(
+    "/internal/applications/:guildId/forms/:formId",
+    async (
+      request,
+      reply
+    ) => {
+      if (
+        !internalAuthorized(
+          request
+        )
+      ) {
+        return unauthorized(
+          reply
+        );
+      }
+
+      try {
+        return await deleteApplicationForm(
+          request.params.guildId,
+          request.params.formId
+        );
+      } catch (error) {
+        return reply
+          .code(400)
+          .send({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to delete application.",
           });
       }
     }

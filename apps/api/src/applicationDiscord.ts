@@ -96,3 +96,12 @@ export function sendApplicationInterviewDm(
     payload
   );
 }
+
+export function postApplicantChannelNotification(
+  payload: unknown
+) {
+  return botRequest(
+    "/internal/applications/notify-channel",
+    payload
+  );
+}

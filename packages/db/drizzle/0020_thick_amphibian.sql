@@ -1,0 +1,2 @@
+ALTER TABLE "application_advanced_settings" ALTER COLUMN "applicant_dm_enabled" SET DEFAULT false;--> statement-breakpoint
+ALTER TABLE "application_advanced_settings" ADD COLUMN "applicant_notification_channel_id" text;

@@ -14,8 +14,7 @@ import {
 
 import {
   assignAcceptedRole,
-  sendApplicantDm,
-  sendInterviewNotification,
+  postApplicantChannelNotification,
 } from "./applicationService.js";
 
 async function reviewerAllowed(
@@ -283,7 +282,7 @@ export async function handleApplicationButton(
 
       if (
         advancedSettings.settings
-          ?.applicantDmEnabled
+          ?.applicantNotificationChannelId
       ) {
         try {
           const advanced =
@@ -292,11 +291,21 @@ export async function handleApplicationButton(
               submissionId
             );
 
-          await sendInterviewNotification(
+          await postApplicantChannelNotification(
             client,
             {
+              guildId:
+                interaction.guildId,
+
+              channelId:
+                advancedSettings.settings
+                  .applicantNotificationChannelId,
+
               applicantUserId:
                 detail.submission.applicantUserId,
+
+              title:
+                "Interview Requested",
 
               formName:
                 detail.form.name,
@@ -304,18 +313,14 @@ export async function handleApplicationButton(
               applicationCode:
                 advanced.code,
 
-              interviewerUsername:
-                reviewer.globalName ||
-                reviewer.username,
-
               message:
                 advancedSettings.settings
                   ?.interviewMessage ??
-                undefined,
+                "Your application has moved to the interview stage.",
             }
           );
         } catch {
-          // DM failures should not fail the review action.
+          // Notification failure should not fail the review action.
         }
       }
 
@@ -377,26 +382,45 @@ export async function handleApplicationButton(
 
       if (
         advancedSettings.settings
-          ?.applicantDmEnabled
+          ?.applicantNotificationChannelId
       ) {
         try {
-          await sendApplicantDm(
+          const advanced =
+            await getAdvancedApplicationSubmissionDetail(
+              interaction.guildId,
+              submissionId
+            );
+
+          await postApplicantChannelNotification(
             client,
             {
+              guildId:
+                interaction.guildId,
+
+              channelId:
+                advancedSettings.settings
+                  .applicantNotificationChannelId,
+
               applicantUserId:
                 detail.submission.applicantUserId,
 
               title:
                 "Application Accepted",
 
+              formName:
+                detail.form.name,
+
+              applicationCode:
+                advanced.code,
+
               message:
                 advancedSettings.settings
                   ?.acceptedMessage ??
-                `Your application for **${detail.form.name}** has been accepted.`,
+                "Your application has been accepted.",
             }
           );
         } catch {
-          // Applicant may have DMs disabled.
+          // Notification failure should not fail the review action.
         }
       }
 
@@ -436,26 +460,45 @@ export async function handleApplicationButton(
 
       if (
         advancedSettings.settings
-          ?.applicantDmEnabled
+          ?.applicantNotificationChannelId
       ) {
         try {
-          await sendApplicantDm(
+          const advanced =
+            await getAdvancedApplicationSubmissionDetail(
+              interaction.guildId,
+              submissionId
+            );
+
+          await postApplicantChannelNotification(
             client,
             {
+              guildId:
+                interaction.guildId,
+
+              channelId:
+                advancedSettings.settings
+                  .applicantNotificationChannelId,
+
               applicantUserId:
                 detail.submission.applicantUserId,
 
               title:
-                "Application Update",
+                "Application Denied",
+
+              formName:
+                detail.form.name,
+
+              applicationCode:
+                advanced.code,
 
               message:
                 advancedSettings.settings
                   ?.deniedMessage ??
-                `Your application for **${detail.form.name}** was not accepted at this time.`,
+                "Your application was not accepted at this time.",
             }
           );
         } catch {
-          // Applicant may have DMs disabled.
+          // Notification failure should not fail the review action.
         }
       }
 

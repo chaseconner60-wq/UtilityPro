@@ -80,6 +80,7 @@ const VALID_FORM_STATUSES =
     "draft",
     "open",
     "closed",
+    "archived",
   ]);
 
 const VALID_SUBMISSION_STATUSES =
@@ -1497,4 +1498,106 @@ export async function reviewApplicationSubmission(
   );
 
   return submission;
+}
+
+
+export async function deleteApplicationForm(
+  guildId: string,
+  formId: string
+) {
+  const [form] =
+    await db
+      .select()
+      .from(
+        applicationForms
+      )
+      .where(
+        and(
+          eq(
+            applicationForms.guildId,
+            guildId
+          ),
+          eq(
+            applicationForms.id,
+            formId
+          )
+        )
+      )
+      .limit(1);
+
+  if (!form) {
+    throw new Error(
+      "Application form not found."
+    );
+  }
+
+  const submissions =
+    await db
+      .select({
+        id:
+          applicationSubmissions.id,
+      })
+      .from(
+        applicationSubmissions
+      )
+      .where(
+        and(
+          eq(
+            applicationSubmissions.guildId,
+            guildId
+          ),
+          eq(
+            applicationSubmissions.formId,
+            formId
+          )
+        )
+      )
+      .limit(1);
+
+  if (
+    submissions.length
+  ) {
+    throw new Error(
+      "This application has submissions and cannot be permanently deleted. Close or archive it instead."
+    );
+  }
+
+  await db
+    .delete(
+      applicationQuestions
+    )
+    .where(
+      and(
+        eq(
+          applicationQuestions.guildId,
+          guildId
+        ),
+        eq(
+          applicationQuestions.formId,
+          formId
+        )
+      )
+    );
+
+  await db
+    .delete(
+      applicationForms
+    )
+    .where(
+      and(
+        eq(
+          applicationForms.guildId,
+          guildId
+        ),
+        eq(
+          applicationForms.id,
+          formId
+        )
+      )
+    );
+
+  return {
+    deleted: true,
+    formId,
+  };
 }

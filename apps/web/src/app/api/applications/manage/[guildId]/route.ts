@@ -101,9 +101,19 @@ export async function GET(
       request.url
     );
 
+  const resources =
+    url.searchParams.get(
+      "resources"
+    ) === "1";
+
   const formId =
     url.searchParams.get(
       "formId"
+    );
+
+  const advancedFormId =
+    url.searchParams.get(
+      "advancedFormId"
     );
 
   const submissionId =
@@ -112,11 +122,15 @@ export async function GET(
     );
 
   const target =
-    submissionId
-      ? `${apiUrl}/internal/applications/${guildId}/submissions/${encodeURIComponent(submissionId)}`
-      : formId
-        ? `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(formId)}`
-        : `${apiUrl}/internal/applications/${guildId}`;
+    resources
+      ? `${apiUrl}/internal/guild-resources/${guildId}`
+      : submissionId
+        ? `${apiUrl}/internal/applications/${guildId}/submissions/${encodeURIComponent(submissionId)}`
+        : advancedFormId
+          ? `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(advancedFormId)}/advanced`
+          : formId
+            ? `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(formId)}`
+            : `${apiUrl}/internal/applications/${guildId}`;
 
   const response =
     await fetch(
@@ -272,6 +286,52 @@ export async function POST(
       createdBy:
         auth.identity.id,
     };
+  } else if (
+    action ===
+    "advanced-save"
+  ) {
+    if (!body.formId) {
+      return NextResponse.json(
+        {
+          error:
+            "formId is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(body.formId)}/advanced`;
+
+    method =
+      "PATCH";
+
+    payload =
+      body.settings ??
+      {};
+  } else if (
+    action ===
+    "form-delete"
+  ) {
+    if (!body.formId) {
+      return NextResponse.json(
+        {
+          error:
+            "formId is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(body.formId)}`;
+
+    method =
+      "DELETE";
   } else if (
     action ===
     "form-save"

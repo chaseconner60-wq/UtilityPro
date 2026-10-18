@@ -1587,7 +1587,11 @@ export const applicationAdvancedSettings = pgTable(
       "applicant_dm_enabled"
     )
       .notNull()
-      .default(true),
+      .default(false),
+
+    applicantNotificationChannelId: text(
+      "applicant_notification_channel_id"
+    ),
 
     submitMessage: text(
       "submit_message"

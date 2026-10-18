@@ -141,6 +141,13 @@
       "when": 1792356440420,
       "tag": "0019_rainy_bruce_banner",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792364441529,
+      "tag": "0020_thick_amphibian",
+      "breakpoints": true
     }
   ]
 }

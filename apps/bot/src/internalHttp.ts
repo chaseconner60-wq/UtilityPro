@@ -9,6 +9,7 @@ import type {
 import {
   assignAcceptedRole,
   postApplicationReviewEmbed,
+  postApplicantChannelNotification,
   sendApplicantDm,
   sendInterviewNotification,
 } from "./applicationService.js";
@@ -156,6 +157,25 @@ export function startInternalBotHttp(
           ) {
             const result =
               await postApplicationReviewEmbed(
+                client,
+                body
+              );
+
+            response.end(
+              JSON.stringify(
+                result
+              )
+            );
+
+            return;
+          }
+
+          if (
+            request.url ===
+            "/internal/applications/notify-channel"
+          ) {
+            const result =
+              await postApplicantChannelNotification(
                 client,
                 body
               );

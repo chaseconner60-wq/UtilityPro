@@ -10,6 +10,28 @@ import {
   useParams,
 } from "next/navigation";
 
+type GuildChannel = {
+  id: string;
+  guildId: string;
+  name: string;
+  type: number;
+  parentId: string | null;
+  position: number;
+};
+
+type GuildRole = {
+  id: string;
+  guildId: string;
+  name: string;
+  position: number;
+  managed: boolean;
+};
+
+type GuildResources = {
+  channels: GuildChannel[];
+  roles: GuildRole[];
+};
+
 type Portal = {
   enabled: boolean;
   portalName: string;
@@ -22,6 +44,8 @@ type Form = {
   description: string | null;
   status: string;
   maxApplicationsPerUser: number;
+  reviewChannelId: string | null;
+  acceptedRoleId: string | null;
 };
 
 type Submission = {
@@ -31,6 +55,15 @@ type Submission = {
   applicantUsername: string;
   status: string;
   submittedAt: string;
+};
+
+type AdvancedSettings = {
+  applicantNotificationChannelId: string | null;
+  applicantDmEnabled: boolean;
+  submitMessage: string | null;
+  interviewMessage: string | null;
+  acceptedMessage: string | null;
+  deniedMessage: string | null;
 };
 
 type Question = {
@@ -87,6 +120,16 @@ export default function ApplicationsPortal() {
       null
     );
 
+
+  const [
+    resources,
+    setResources,
+  ] =
+    useState<GuildResources>({
+      channels: [],
+      roles: [],
+    });
+
   const [
     forms,
     setForms,
@@ -112,6 +155,20 @@ export default function ApplicationsPortal() {
     setQuestions,
   ] =
     useState<Question[]>([]);
+
+
+  const [
+    advancedSettings,
+    setAdvancedSettings,
+  ] =
+    useState<AdvancedSettings>({
+      applicantNotificationChannelId: null,
+      applicantDmEnabled: false,
+      submitMessage: null,
+      interviewMessage: null,
+      acceptedMessage: null,
+      deniedMessage: null,
+    });
 
   const [
     selectedSubmission,
@@ -161,17 +218,33 @@ export default function ApplicationsPortal() {
 
   async function load() {
     try {
-      const response =
-        await fetch(
-          `/api/applications/manage/${guildId}`,
-          {
-            cache:
-              "no-store",
-          }
-        );
+      const [
+        response,
+        resourcesResponse,
+      ] =
+        await Promise.all([
+          fetch(
+            `/api/applications/manage/${guildId}`,
+            {
+              cache:
+                "no-store",
+            }
+          ),
+
+          fetch(
+            `/api/applications/manage/${guildId}?resources=1`,
+            {
+              cache:
+                "no-store",
+            }
+          ),
+        ]);
 
       const data =
         await response.json();
+
+      const resourcesData =
+        await resourcesResponse.json();
 
       if (
         response.status ===
@@ -203,6 +276,20 @@ export default function ApplicationsPortal() {
         data.submissions ??
         []
       );
+
+      if (
+        resourcesResponse.ok
+      ) {
+        setResources({
+          channels:
+            resourcesData.channels ??
+            [],
+
+          roles:
+            resourcesData.roles ??
+            [],
+        });
+      }
     } catch (error) {
       setError(
         error instanceof Error
@@ -309,17 +396,33 @@ export default function ApplicationsPortal() {
   async function editForm(
     form: Form
   ) {
-    const response =
-      await fetch(
-        `/api/applications/manage/${guildId}?formId=${encodeURIComponent(form.id)}`,
-        {
-          cache:
-            "no-store",
-        }
-      );
+    const [
+      response,
+      advancedResponse,
+    ] =
+      await Promise.all([
+        fetch(
+          `/api/applications/manage/${guildId}?formId=${encodeURIComponent(form.id)}`,
+          {
+            cache:
+              "no-store",
+          }
+        ),
+
+        fetch(
+          `/api/applications/manage/${guildId}?advancedFormId=${encodeURIComponent(form.id)}`,
+          {
+            cache:
+              "no-store",
+          }
+        ),
+      ]);
 
     const data =
       await response.json();
+
+    const advancedData =
+      await advancedResponse.json();
 
     if (!response.ok) {
       setError(
@@ -333,6 +436,15 @@ export default function ApplicationsPortal() {
     setSelectedForm(
       data.form
     );
+
+    if (
+      advancedResponse.ok &&
+      advancedData.settings
+    ) {
+      setAdvancedSettings(
+        advancedData.settings
+      );
+    }
 
     setQuestions(
       (
@@ -731,6 +843,118 @@ export default function ApplicationsPortal() {
                 </p>
               </div>
 
+              <div className="flex flex-wrap gap-2">
+                {selectedForm.status !==
+                  "archived" ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={async () => {
+                      const confirmed =
+                        window.confirm(
+                          `Archive "${selectedForm.name}"? Existing submissions and history will be preserved.`
+                        );
+
+                      if (!confirmed) {
+                        return;
+                      }
+
+                      const result =
+                        await action({
+                          action:
+                            "form-save",
+
+                          formId:
+                            selectedForm.id,
+
+                          form: {
+                            status:
+                              "archived",
+                          },
+                        });
+
+                      if (result) {
+                        setSelectedForm({
+                          ...selectedForm,
+                          status:
+                            "archived",
+                        });
+                      }
+                    }}
+                    className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-3 py-2 text-sm font-semibold text-amber-300 disabled:opacity-50"
+                  >
+                    Archive Application
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={async () => {
+                      const result =
+                        await action({
+                          action:
+                            "form-save",
+
+                          formId:
+                            selectedForm.id,
+
+                          form: {
+                            status:
+                              "draft",
+                          },
+                        });
+
+                      if (result) {
+                        setSelectedForm({
+                          ...selectedForm,
+                          status:
+                            "draft",
+                        });
+                      }
+                    }}
+                    className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm font-semibold text-zinc-300 disabled:opacity-50"
+                  >
+                    Restore to Draft
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={async () => {
+                    const confirmed =
+                      window.confirm(
+                        `Delete "${selectedForm.name}"? This only works if the application has no submissions.`
+                      );
+
+                    if (!confirmed) {
+                      return;
+                    }
+
+                    const result =
+                      await action({
+                        action:
+                          "form-delete",
+
+                        formId:
+                          selectedForm.id,
+                      });
+
+                    if (result) {
+                      setSelectedForm(
+                        null
+                      );
+
+                      setQuestions(
+                        []
+                      );
+                    }
+                  }}
+                  className="rounded-xl border border-red-500/20 bg-red-500/[0.06] px-3 py-2 text-sm font-semibold text-red-300 disabled:opacity-50"
+                >
+                  Delete Application
+                </button>
+
               <select
                 value={
                   selectedForm.status
@@ -771,7 +995,306 @@ export default function ApplicationsPortal() {
                 <option value="closed">
                   Closed
                 </option>
+
+                <option value="archived">
+                  Archived
+                </option>
               </select>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-white/[0.06] bg-black/20 p-5">
+              <h3 className="font-semibold">
+                Discord Integration
+              </h3>
+
+              <p className="mt-1 text-xs text-zinc-600">
+                Configure where staff reviews applications and what role accepted applicants receive.
+              </p>
+
+              <label className="mt-4 block">
+                <span className="text-xs font-medium text-zinc-500">
+                  Review Channel
+                </span>
+
+                <select
+                  value={
+                    selectedForm.reviewChannelId ??
+                    ""
+                  }
+                  onChange={(event) =>
+                    setSelectedForm({
+                      ...selectedForm,
+
+                      reviewChannelId:
+                        event.target.value ||
+                        null,
+                    })
+                  }
+                  className="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#090a0e] px-4 py-3 text-sm"
+                >
+                  <option value="">
+                    Use portal default
+                  </option>
+
+                  {resources.channels
+                    .filter(
+                      (channel) =>
+                        channel.type === 0
+                    )
+                    .map(
+                      (channel) => (
+                        <option
+                          key={
+                            channel.id
+                          }
+                          value={
+                            channel.id
+                          }
+                        >
+                          #{channel.name}
+                        </option>
+                      )
+                    )}
+                </select>
+              </label>
+
+              <label className="mt-4 block">
+                <span className="text-xs font-medium text-zinc-500">
+                  Accepted Role
+                </span>
+
+                <select
+                  value={
+                    selectedForm.acceptedRoleId ??
+                    ""
+                  }
+                  onChange={(event) =>
+                    setSelectedForm({
+                      ...selectedForm,
+
+                      acceptedRoleId:
+                        event.target.value ||
+                        null,
+                    })
+                  }
+                  className="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#090a0e] px-4 py-3 text-sm"
+                >
+                  <option value="">
+                    No automatic role
+                  </option>
+
+                  {resources.roles
+                    .filter(
+                      (role) =>
+                        !role.managed
+                    )
+                    .sort(
+                      (a, b) =>
+                        b.position -
+                        a.position
+                    )
+                    .map(
+                      (role) => (
+                        <option
+                          key={
+                            role.id
+                          }
+                          value={
+                            role.id
+                          }
+                        >
+                          @{role.name}
+                        </option>
+                      )
+                    )}
+                </select>
+              </label>
+
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  void action({
+                    action:
+                      "form-save",
+
+                    formId:
+                      selectedForm.id,
+
+                    form: {
+                      reviewChannelId:
+                        selectedForm.reviewChannelId,
+
+                      acceptedRoleId:
+                        selectedForm.acceptedRoleId,
+                    },
+                  })
+                }
+                className="mt-4 rounded-xl bg-white/[0.06] px-4 py-2.5 text-sm font-semibold text-zinc-200 disabled:opacity-50"
+              >
+                Save Discord Settings
+              </button>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-white/[0.06] bg-black/20 p-5">
+              <h3 className="font-semibold">
+                Applicant Notifications
+              </h3>
+
+              <p className="mt-1 text-xs text-zinc-600">
+                UtilityX will ping applicants in this Discord channel when their application changes.
+              </p>
+
+              <label className="mt-4 block">
+                <span className="text-xs font-medium text-zinc-500">
+                  Applicant Notification Channel
+                </span>
+
+                <select
+                  value={
+                    advancedSettings.applicantNotificationChannelId ??
+                    ""
+                  }
+                  onChange={(event) =>
+                    setAdvancedSettings({
+                      ...advancedSettings,
+
+                      applicantNotificationChannelId:
+                        event.target.value ||
+                        null,
+                    })
+                  }
+                  className="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#090a0e] px-4 py-3 text-sm"
+                >
+                  <option value="">
+                    Disabled
+                  </option>
+
+                  {resources.channels
+                    .filter(
+                      (channel) =>
+                        channel.type === 0
+                    )
+                    .sort(
+                      (a, b) =>
+                        a.position -
+                        b.position
+                    )
+                    .map(
+                      (channel) => (
+                        <option
+                          key={
+                            channel.id
+                          }
+                          value={
+                            channel.id
+                          }
+                        >
+                          #{channel.name}
+                        </option>
+                      )
+                    )}
+                </select>
+              </label>
+
+              <textarea
+                value={
+                  advancedSettings.submitMessage ??
+                  ""
+                }
+                onChange={(event) =>
+                  setAdvancedSettings({
+                    ...advancedSettings,
+
+                    submitMessage:
+                      event.target.value ||
+                      null,
+                  })
+                }
+                placeholder="Submission message"
+                className="mt-3 min-h-20 w-full rounded-xl border border-white/[0.08] bg-[#090a0e] px-4 py-3 text-sm"
+              />
+
+              <textarea
+                value={
+                  advancedSettings.interviewMessage ??
+                  ""
+                }
+                onChange={(event) =>
+                  setAdvancedSettings({
+                    ...advancedSettings,
+
+                    interviewMessage:
+                      event.target.value ||
+                      null,
+                  })
+                }
+                placeholder="Interview message"
+                className="mt-3 min-h-20 w-full rounded-xl border border-white/[0.08] bg-[#090a0e] px-4 py-3 text-sm"
+              />
+
+              <textarea
+                value={
+                  advancedSettings.acceptedMessage ??
+                  ""
+                }
+                onChange={(event) =>
+                  setAdvancedSettings({
+                    ...advancedSettings,
+
+                    acceptedMessage:
+                      event.target.value ||
+                      null,
+                  })
+                }
+                placeholder="Accepted message"
+                className="mt-3 min-h-20 w-full rounded-xl border border-white/[0.08] bg-[#090a0e] px-4 py-3 text-sm"
+              />
+
+              <textarea
+                value={
+                  advancedSettings.deniedMessage ??
+                  ""
+                }
+                onChange={(event) =>
+                  setAdvancedSettings({
+                    ...advancedSettings,
+
+                    deniedMessage:
+                      event.target.value ||
+                      null,
+                  })
+                }
+                placeholder="Denied message"
+                className="mt-3 min-h-20 w-full rounded-xl border border-white/[0.08] bg-[#090a0e] px-4 py-3 text-sm"
+              />
+
+              <button
+                type="button"
+                disabled={
+                  busy
+                }
+                onClick={() =>
+                  void action({
+                    action:
+                      "advanced-save",
+
+                    formId:
+                      selectedForm.id,
+
+                    settings: {
+                      ...advancedSettings,
+
+                      applicantDmEnabled:
+                        false,
+                    },
+                  })
+                }
+                className="mt-4 rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+              >
+                Save Notification Settings
+              </button>
             </div>
 
             <div className="mt-6 space-y-4">
