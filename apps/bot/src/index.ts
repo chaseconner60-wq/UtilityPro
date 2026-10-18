@@ -51,6 +51,15 @@ import {
   moderationCommands,
 } from "./commands/moderation.js";
 
+import {
+  handleApplicationButton,
+} from "./applicationInteractions.js";
+
+import {
+  startInternalBotHttp,
+} from "./internalHttp.js";
+
+
 const token = process.env.DISCORD_TOKEN;
 const ownerId = process.env.BOT_OWNER_ID;
 const clientId = "1548859144566480926";
@@ -2171,6 +2180,16 @@ client.on(
       }
 
       if (interaction.isButton()) {
+        const applicationHandled =
+          await handleApplicationButton(
+            client,
+            interaction
+          );
+
+        if (applicationHandled) {
+          return;
+        }
+
         if (
           interaction.customId ===
           "utilityx_ticket_create"
@@ -2364,5 +2383,7 @@ client.on(Events.GuildMemberRemove, async (member) => {
     );
   }
 });
+
+startInternalBotHttp(client);
 
 client.login(token);

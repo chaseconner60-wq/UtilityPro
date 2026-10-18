@@ -10,6 +10,11 @@ import {
 } from "node:crypto";
 
 import {
+  recordApplicationStatusChange,
+  recordApplicationSubmissionCreated,
+} from "./applicationAdvanced.js";
+
+import {
   db,
   applicationPortals,
   applicationForms,
@@ -1213,6 +1218,14 @@ export async function submitApplication(
       );
   }
 
+  await recordApplicationSubmissionCreated(
+    guildId,
+    formId,
+    submission.id,
+    applicantUserId,
+    applicantUsername
+  );
+
   return submission;
 }
 
@@ -1472,6 +1485,16 @@ export async function reviewApplicationSubmission(
 
       note,
     });
+
+  await recordApplicationStatusChange(
+    guildId,
+    submissionId,
+    current.submission.status,
+    status,
+    reviewerUserId,
+    reviewerUsername,
+    note
+  );
 
   return submission;
 }

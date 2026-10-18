@@ -1502,3 +1502,673 @@ export const applicationReviews = pgTable(
       .defaultNow(),
   }
 );
+
+export const applicationAdvancedSettings = pgTable(
+  "application_advanced_settings",
+  {
+    formId: text(
+      "form_id"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    applicationPrefix: text(
+      "application_prefix"
+    )
+      .notNull()
+      .default("APP"),
+
+    cooldownHours: integer(
+      "cooldown_hours"
+    )
+      .notNull()
+      .default(0),
+
+    maxTotalSubmissions: integer(
+      "max_total_submissions"
+    ),
+
+    autoCloseAtLimit: boolean(
+      "auto_close_at_limit"
+    )
+      .notNull()
+      .default(false),
+
+    minDiscordAccountAgeDays:
+      integer(
+        "min_discord_account_age_days"
+      )
+        .notNull()
+        .default(0),
+
+    minServerJoinAgeDays:
+      integer(
+        "min_server_join_age_days"
+      )
+        .notNull()
+        .default(0),
+
+    requiredRoleIds: jsonb(
+      "required_role_ids"
+    )
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+
+    blockedRoleIds: jsonb(
+      "blocked_role_ids"
+    )
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+
+    reviewerRoleIds: jsonb(
+      "reviewer_role_ids"
+    )
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+
+    scoringEnabled: boolean(
+      "scoring_enabled"
+    )
+      .notNull()
+      .default(false),
+
+    smartReviewEnabled: boolean(
+      "smart_review_enabled"
+    )
+      .notNull()
+      .default(false),
+
+    applicantDmEnabled: boolean(
+      "applicant_dm_enabled"
+    )
+      .notNull()
+      .default(true),
+
+    submitMessage: text(
+      "submit_message"
+    ),
+
+    interviewMessage: text(
+      "interview_message"
+    ),
+
+    acceptedMessage: text(
+      "accepted_message"
+    ),
+
+    deniedMessage: text(
+      "denied_message"
+    ),
+
+    successMessage: text(
+      "success_message"
+    ),
+
+    brandingAccent: text(
+      "branding_accent"
+    ),
+
+    bannerUrl: text(
+      "banner_url"
+    ),
+
+    updatedAt: timestamp(
+      "updated_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationQuestionSettings = pgTable(
+  "application_question_settings",
+  {
+    questionId: text(
+      "question_id"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    formId: text(
+      "form_id"
+    ).notNull(),
+
+    minLength: integer(
+      "min_length"
+    ),
+
+    maxLength: integer(
+      "max_length"
+    ),
+
+    weight: integer(
+      "weight"
+    )
+      .notNull()
+      .default(1),
+
+    conditionalQuestionId: text(
+      "conditional_question_id"
+    ),
+
+    conditionalOperator: text(
+      "conditional_operator"
+    ),
+
+    conditionalValue: jsonb(
+      "conditional_value"
+    )
+      .$type<
+        string |
+        string[] |
+        boolean |
+        null
+      >(),
+
+    updatedAt: timestamp(
+      "updated_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationAssignments = pgTable(
+  "application_assignments",
+  {
+    id: text(
+      "id"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    submissionId: text(
+      "submission_id"
+    ).notNull(),
+
+    reviewerUserId: text(
+      "reviewer_user_id"
+    ).notNull(),
+
+    reviewerUsername: text(
+      "reviewer_username"
+    ).notNull(),
+
+    status: text(
+      "status"
+    )
+      .notNull()
+      .default("assigned"),
+
+    assignedByUserId: text(
+      "assigned_by_user_id"
+    ),
+
+    assignedByUsername: text(
+      "assigned_by_username"
+    ),
+
+    createdAt: timestamp(
+      "created_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp(
+      "updated_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationQuestionScores = pgTable(
+  "application_question_scores",
+  {
+    id: text(
+      "id"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    submissionId: text(
+      "submission_id"
+    ).notNull(),
+
+    questionId: text(
+      "question_id"
+    ).notNull(),
+
+    reviewerUserId: text(
+      "reviewer_user_id"
+    ).notNull(),
+
+    reviewerUsername: text(
+      "reviewer_username"
+    ).notNull(),
+
+    score: integer(
+      "score"
+    ).notNull(),
+
+    note: text(
+      "note"
+    ),
+
+    createdAt: timestamp(
+      "created_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp(
+      "updated_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationInterviews = pgTable(
+  "application_interviews",
+  {
+    id: text(
+      "id"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    submissionId: text(
+      "submission_id"
+    ).notNull(),
+
+    status: text(
+      "status"
+    )
+      .notNull()
+      .default("scheduled"),
+
+    scheduledFor: timestamp(
+      "scheduled_for",
+      {
+        withTimezone: true,
+      }
+    ),
+
+    interviewerUserId: text(
+      "interviewer_user_id"
+    ),
+
+    interviewerUsername: text(
+      "interviewer_username"
+    ),
+
+    notes: text(
+      "notes"
+    ),
+
+    outcome: text(
+      "outcome"
+    ),
+
+    createdAt: timestamp(
+      "created_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp(
+      "updated_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationCustomStatuses = pgTable(
+  "application_custom_statuses",
+  {
+    id: text(
+      "id"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    formId: text(
+      "form_id"
+    ),
+
+    name: text(
+      "name"
+    ).notNull(),
+
+    slug: text(
+      "slug"
+    ).notNull(),
+
+    position: integer(
+      "position"
+    )
+      .notNull()
+      .default(0),
+
+    terminal: boolean(
+      "terminal"
+    )
+      .notNull()
+      .default(false),
+
+    createdAt: timestamp(
+      "created_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationStatusHistory = pgTable(
+  "application_status_history",
+  {
+    id: text(
+      "id"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    submissionId: text(
+      "submission_id"
+    ).notNull(),
+
+    fromStatus: text(
+      "from_status"
+    ),
+
+    toStatus: text(
+      "to_status"
+    ).notNull(),
+
+    actorUserId: text(
+      "actor_user_id"
+    ),
+
+    actorUsername: text(
+      "actor_username"
+    ),
+
+    note: text(
+      "note"
+    ),
+
+    createdAt: timestamp(
+      "created_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationAuditLogs = pgTable(
+  "application_audit_logs",
+  {
+    id: text(
+      "id"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    formId: text(
+      "form_id"
+    ),
+
+    submissionId: text(
+      "submission_id"
+    ),
+
+    actorUserId: text(
+      "actor_user_id"
+    ),
+
+    actorUsername: text(
+      "actor_username"
+    ),
+
+    action: text(
+      "action"
+    ).notNull(),
+
+    metadata: jsonb(
+      "metadata"
+    )
+      .$type<
+        Record<
+          string,
+          unknown
+        >
+      >()
+      .notNull()
+      .default({}),
+
+    createdAt: timestamp(
+      "created_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationSubmissionCodes = pgTable(
+  "application_submission_codes",
+  {
+    submissionId: text(
+      "submission_id"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    formId: text(
+      "form_id"
+    ).notNull(),
+
+    code: text(
+      "code"
+    ).notNull(),
+
+    createdAt: timestamp(
+      "created_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationTemplates = pgTable(
+  "application_templates",
+  {
+    id: text(
+      "id"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    name: text(
+      "name"
+    ).notNull(),
+
+    description: text(
+      "description"
+    ),
+
+    formSnapshot: jsonb(
+      "form_snapshot"
+    )
+      .$type<
+        Record<
+          string,
+          unknown
+        >
+      >()
+      .notNull(),
+
+    createdBy: text(
+      "created_by"
+    ),
+
+    createdAt: timestamp(
+      "created_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationAppeals = pgTable(
+  "application_appeals",
+  {
+    id: text(
+      "id"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    submissionId: text(
+      "submission_id"
+    ).notNull(),
+
+    applicantUserId: text(
+      "applicant_user_id"
+    ).notNull(),
+
+    reason: text(
+      "reason"
+    ).notNull(),
+
+    status: text(
+      "status"
+    )
+      .notNull()
+      .default("pending"),
+
+    reviewerUserId: text(
+      "reviewer_user_id"
+    ),
+
+    reviewerUsername: text(
+      "reviewer_username"
+    ),
+
+    reviewerNote: text(
+      "reviewer_note"
+    ),
+
+    createdAt: timestamp(
+      "created_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+
+    reviewedAt: timestamp(
+      "reviewed_at",
+      {
+        withTimezone: true,
+      }
+    ),
+  }
+);
+
+export const applicationPortalSlugs = pgTable(
+  "application_portal_slugs",
+  {
+    slug: text(
+      "slug"
+    ).primaryKey(),
+
+    guildId: text(
+      "guild_id"
+    ).notNull(),
+
+    createdAt: timestamp(
+      "created_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp(
+      "updated_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
