@@ -727,6 +727,66 @@ export async function calculateGuildHealth(
   // OVERALL HEALTH
   // =========================================================
 
+  const observedDays =
+    new Set(
+      currentDaily.map(
+        (row) => row.date
+      )
+    ).size;
+
+  const confidence =
+    observedDays >= 7
+      ? "high"
+      : observedDays >= 3
+        ? "medium"
+        : "low";
+
+  const confidenceWeight =
+    observedDays >= 7
+      ? 1
+      : observedDays >= 3
+        ? 0.65
+        : observedDays === 2
+          ? 0.4
+          : observedDays === 1
+            ? 0.25
+            : 0;
+
+  function confidenceAdjusted(
+    score: number
+  ) {
+    return Math.round(
+      75 +
+      (score - 75) *
+        confidenceWeight
+    );
+  }
+
+  activityScore =
+    confidenceAdjusted(
+      activityScore
+    );
+
+  retentionScore =
+    confidenceAdjusted(
+      retentionScore
+    );
+
+  supportScore =
+    confidenceAdjusted(
+      supportScore
+    );
+
+  moderationScore =
+    confidenceAdjusted(
+      moderationScore
+    );
+
+  staffCoverageScore =
+    confidenceAdjusted(
+      staffCoverageScore
+    );
+
   const overallScore =
     Math.round(
       activityScore * 0.25 +
@@ -847,14 +907,7 @@ export async function calculateGuildHealth(
     });
   }
 
-  const observedDays =
-    new Set(
-      currentDaily.map(
-        (row) => row.date
-      )
-    ).size;
-
-  return {
+    return {
     guildId,
 
     generatedAt:
@@ -887,6 +940,8 @@ export async function calculateGuildHealth(
         dataQuality(
           observedDays
         ),
+
+      confidence,
     },
 
     categories: {

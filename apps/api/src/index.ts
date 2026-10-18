@@ -7,6 +7,10 @@ import {
 } from "./healthEngine.js";
 
 import {
+  getHealthDetails,
+} from "./healthDetails.js";
+
+import {
   db,
   guilds,
   globalSettings,
@@ -164,14 +168,21 @@ app.get<{
     }
 
     try {
-      const health =
-        await calculateGuildHealth(
-          guildId
-        );
+      const [health, details] =
+        await Promise.all([
+          calculateGuildHealth(
+            guildId
+          ),
+
+          getHealthDetails(
+            guildId
+          ),
+        ]);
 
       return {
         guild: installedGuild,
         health,
+        details,
       };
     } catch (error) {
       request.log.error(

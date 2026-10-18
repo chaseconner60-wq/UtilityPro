@@ -567,3 +567,39 @@ export const healthMemberLifecycle = pgTable(
     }),
   ]
 );
+
+
+export const guildStaffMembers = pgTable(
+  "guild_staff_members",
+  {
+    guildId: text("guild_id").notNull(),
+    userId: text("user_id").notNull(),
+
+    username: text("username").notNull(),
+    displayName: text("display_name").notNull(),
+
+    avatarUrl: text("avatar_url"),
+
+    isStaff: boolean("is_staff")
+      .notNull()
+      .default(false),
+
+    isModerator: boolean("is_moderator")
+      .notNull()
+      .default(false),
+
+    syncedAt: timestamp("synced_at", {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [
+        table.guildId,
+        table.userId,
+      ],
+    }),
+  ]
+);

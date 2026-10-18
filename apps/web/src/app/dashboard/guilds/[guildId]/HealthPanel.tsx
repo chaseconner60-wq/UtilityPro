@@ -1,5 +1,10 @@
 "use client";
 
+import HealthDetailsDrawer, {
+  type HealthDetailView,
+} from "./HealthDetailsDrawer";
+
+
 import {
   useEffect,
   useState,
@@ -68,6 +73,11 @@ type HealthData = {
       | "good"
       | "limited"
       | "collecting";
+
+    confidence?:
+      | "low"
+      | "medium"
+      | "high";
   };
 
   categories: {
@@ -167,6 +177,14 @@ export default function HealthPanel({
   const [error, setError] =
     useState("");
 
+  const [details, setDetails] =
+    useState<any>(null);
+
+  const [detailView, setDetailView] =
+    useState<HealthDetailView | null>(
+      null
+    );
+
   async function loadHealth() {
     setLoading(true);
     setError("");
@@ -195,6 +213,10 @@ export default function HealthPanel({
       }
 
       setHealth(data.health);
+      setDetails(
+        (data as any).details ??
+        null
+      );
     } catch (error) {
       setError(
         error instanceof Error
@@ -321,11 +343,15 @@ export default function HealthPanel({
 
               <div className="pb-2">
                 <p className="text-2xl font-bold tracking-tight text-white">
-                  {overall.label}
+                  {collecting
+                    ? "Learning..."
+                    : overall.label}
                 </p>
 
                 <p className="mt-1 text-sm text-zinc-500">
-                  Overall server health
+                  {collecting
+                    ? `Preliminary score: ${overall.score}`
+                    : "Overall server health"}
                 </p>
               </div>
             </div>
@@ -419,6 +445,50 @@ export default function HealthPanel({
         </div>
       </div>
 
+      {insights.length > 0 && (
+        <div className="mt-5 rounded-3xl border border-indigo-500/15 bg-gradient-to-r from-indigo-500/[0.09] to-violet-500/[0.04] p-6">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-300">
+            Top Recommendation
+          </p>
+
+          <div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div>
+              <h3 className="text-lg font-bold">
+                {insights[0].title}
+              </h3>
+
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-500">
+                {insights[0].message}
+              </p>
+            </div>
+
+            {insights[0].action && (
+              <button
+                type="button"
+                onClick={() => {
+                  const action =
+                    insights[0].action!;
+
+                  if (action === "tickets")
+                    setDetailView("tickets");
+                  else if (action === "staff")
+                    setDetailView("staff");
+                  else if (action === "moderation")
+                    setDetailView("moderation");
+                  else if (action === "welcome")
+                    setDetailView("retention");
+                  else
+                    onNavigate("automod");
+                }}
+                className="shrink-0 rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-400"
+              >
+                Investigate →
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.3fr_.7fr]">
         <section className="rounded-3xl border border-white/[0.07] bg-white/[0.018] p-6">
           <div>
@@ -448,6 +518,13 @@ export default function HealthPanel({
                   insight={insight}
                   onNavigate={
                     onNavigate
+                  }
+                  onOpenDetail={(
+                    view
+                  ) =>
+                    setDetailView(
+                      view
+                    )
                   }
                 />
               )
@@ -617,6 +694,18 @@ export default function HealthPanel({
           />
         </MetricPanel>
       </div>
+      {detailView &&
+        details && (
+          <HealthDetailsDrawer
+            view={detailView}
+            details={details}
+            onClose={() =>
+              setDetailView(
+                null
+              )
+            }
+          />
+        )}
     </HealthShell>
   );
 }
@@ -684,7 +773,7 @@ function HealthRing({
         </span>
 
         <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
-          out of 100
+          preliminary
         </span>
       </div>
     </div>
@@ -739,7 +828,13 @@ function HealthCategoryCard({
 
       <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
         <div
-          className="h-full rounded-full bg-indigo-400 transition-all duration-500"
+          className={`h-full rounded-full transition-all duration-500 ${
+            category.score >= 80
+              ? "bg-emerald-400"
+              : category.score >= 60
+                ? "bg-amber-400"
+                : "bg-red-400"
+          }`}
           style={{
             width:
               `${Math.max(
@@ -763,11 +858,16 @@ function HealthCategoryCard({
 function InsightCard({
   insight,
   onNavigate,
+  onOpenDetail,
 }: {
   insight: Insight;
 
   onNavigate: (
     section: DashboardSection
+  ) => void;
+
+  onOpenDetail: (
+    view: HealthDetailView
   ) => void;
 }) {
   const actionMap: Record<
@@ -785,13 +885,13 @@ function InsightCard({
     HealthAction,
     string
   > = {
-    tickets: "Review Tickets",
+    tickets: "View Open Tickets",
     moderation:
-      "Review Moderation",
+      "View Incidents",
     automod: "Open AutoMod",
     welcome:
-      "Improve Welcome",
-    staff: "Review Staff",
+      "View Retention",
+    staff: "View Staff Coverage",
   };
 
   const symbol =
@@ -832,13 +932,51 @@ function InsightCard({
       {insight.action && (
         <button
           type="button"
-          onClick={() =>
+          onClick={() => {
+            const action =
+              insight.action!;
+
+            if (
+              action === "tickets"
+            ) {
+              onOpenDetail(
+                "tickets"
+              );
+              return;
+            }
+
+            if (
+              action === "staff"
+            ) {
+              onOpenDetail(
+                "staff"
+              );
+              return;
+            }
+
+            if (
+              action ===
+              "moderation"
+            ) {
+              onOpenDetail(
+                "moderation"
+              );
+              return;
+            }
+
+            if (
+              action === "welcome"
+            ) {
+              onOpenDetail(
+                "retention"
+              );
+              return;
+            }
+
             onNavigate(
-              actionMap[
-                insight.action!
-              ]
-            )
-          }
+              actionMap[action]
+            );
+          }}
           className="shrink-0 rounded-xl border border-indigo-500/15 bg-indigo-500/[0.07] px-4 py-2 text-xs font-semibold text-indigo-300 transition hover:bg-indigo-500/[0.12]"
         >
           {

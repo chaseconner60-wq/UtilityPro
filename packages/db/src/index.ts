@@ -27,4 +27,5 @@ export {
   healthHourlyActivity,
   healthDailyActiveMembers,
   healthMemberLifecycle,
+  guildStaffMembers,
 } from "./schema.js";
