@@ -379,12 +379,19 @@ export async function GET(
       "sessions"
     ) === "1";
 
+  const players =
+    url.searchParams.get(
+      "players"
+    ) === "1";
+
   const target =
-    sessions
-      ? `${apiUrl}/internal/erlc/${guildId}/sessions`
-      : live
-        ? `${apiUrl}/internal/erlc/${guildId}/live`
-        : `${apiUrl}/internal/erlc/${guildId}`;
+    players
+      ? `${apiUrl}/internal/erlc/${guildId}/players`
+      : sessions
+        ? `${apiUrl}/internal/erlc/${guildId}/sessions`
+        : live
+          ? `${apiUrl}/internal/erlc/${guildId}/live`
+          : `${apiUrl}/internal/erlc/${guildId}`;
 
   const response =
     await fetch(

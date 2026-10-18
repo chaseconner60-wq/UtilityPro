@@ -7,6 +7,7 @@ import {
 
 import {
   fetchErlcSnapshot,
+  fetchErlcPlayers,
   getInternalServerId,
   ErlcApiError,
 } from "./erlcClient.js";
@@ -1804,6 +1805,101 @@ const host = process.env.HOST ?? "0.0.0.0";
 
 try {
   
+
+app.get<{
+  Params: {
+    guildId: string;
+  };
+}>(
+  "/internal/erlc/:guildId/players",
+  async (
+    request,
+    reply
+  ) => {
+    const header =
+      request.headers[
+        "x-utilityx-internal-secret"
+      ];
+
+    if (
+      !internalAuthorized(
+        typeof header ===
+          "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply
+        .code(401)
+        .send({
+          error:
+            "Unauthorized",
+        });
+    }
+
+    const [connection] =
+      await db
+        .select()
+        .from(
+          erlcConnections
+        )
+        .where(
+          eq(
+            erlcConnections.guildId,
+            request.params.guildId
+          )
+        )
+        .limit(1);
+
+    if (!connection) {
+      return reply
+        .code(404)
+        .send({
+          error:
+            "ER:LC is not connected.",
+        });
+    }
+
+    try {
+      const serverKey =
+        decryptErlcServerKey(
+          connection.serverKeyEncrypted,
+          connection.serverKeyIv,
+          connection.serverKeyAuthTag
+        );
+
+      const players =
+        await fetchErlcPlayers(
+          serverKey
+        );
+
+      return {
+        players,
+        count:
+          players.length,
+        checkedAt:
+          new Date().toISOString(),
+      };
+    } catch (error) {
+      if (
+        error instanceof
+        ErlcApiError
+      ) {
+        return reply
+          .code(
+            error.status
+          )
+          .send({
+            error:
+              error.message,
+          });
+      }
+
+      throw error;
+    }
+  }
+);
+
 app.get<{
   Params: {
     guildId: string;

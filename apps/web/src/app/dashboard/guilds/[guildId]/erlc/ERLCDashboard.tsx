@@ -6,6 +6,7 @@ import ERLCConnectionCard, {
 
 import ERLCLiveServer from "./ERLCLiveServer";
 import ERLCSessions from "./ERLCSessions";
+import ERLCPlayers from "./ERLCPlayers";
 
 import {
   useState,
@@ -431,11 +432,8 @@ export default function ERLCDashboard({
 
             {section ===
               "players" && (
-              <PlaceholderPage
-                eyebrow="Operations"
-                title="Players"
-                description="View player activity, session history and linked Discord identities."
-                icon="♙"
+              <ERLCPlayers
+                guildId={guildId}
                 connected={connected}
               />
             )}
