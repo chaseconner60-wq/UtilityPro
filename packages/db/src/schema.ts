@@ -654,3 +654,73 @@ export const erlcConnections = pgTable(
       .defaultNow(),
   }
 );
+
+export const erlcSessions = pgTable(
+  "erlc_sessions",
+  {
+    id: text("id").primaryKey(),
+
+    guildId: text("guild_id")
+      .notNull(),
+
+    serverName: text(
+      "server_name"
+    ),
+
+    status: text("status")
+      .notNull()
+      .default("active"),
+
+    startedAt: timestamp(
+      "started_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+
+    endedAt: timestamp(
+      "ended_at",
+      {
+        withTimezone: true,
+      }
+    ),
+
+    lastActiveAt: timestamp(
+      "last_active_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+
+    peakPlayers: integer(
+      "peak_players"
+    )
+      .notNull()
+      .default(0),
+
+    sampleCount: integer(
+      "sample_count"
+    )
+      .notNull()
+      .default(0),
+
+    playerSampleTotal: integer(
+      "player_sample_total"
+    )
+      .notNull()
+      .default(0),
+
+    createdAt: timestamp(
+      "created_at",
+      {
+        withTimezone: true,
+      }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);

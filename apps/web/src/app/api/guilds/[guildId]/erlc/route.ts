@@ -374,11 +374,21 @@ export async function GET(
       "live"
     ) === "1";
 
+  const sessions =
+    url.searchParams.get(
+      "sessions"
+    ) === "1";
+
+  const target =
+    sessions
+      ? `${apiUrl}/internal/erlc/${guildId}/sessions`
+      : live
+        ? `${apiUrl}/internal/erlc/${guildId}/live`
+        : `${apiUrl}/internal/erlc/${guildId}`;
+
   const response =
     await fetch(
-      live
-        ? `${apiUrl}/internal/erlc/${guildId}/live`
-        : `${apiUrl}/internal/erlc/${guildId}`,
+      target,
       {
         headers: {
           "x-utilityx-internal-secret":

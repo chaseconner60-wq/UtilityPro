@@ -29,4 +29,5 @@ export {
   healthMemberLifecycle,
   guildStaffMembers,
   erlcConnections,
+  erlcSessions,
 } from "./schema.js";

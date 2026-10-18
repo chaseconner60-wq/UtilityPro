@@ -5,6 +5,7 @@ import ERLCConnectionCard, {
 } from "./ERLCConnection";
 
 import ERLCLiveServer from "./ERLCLiveServer";
+import ERLCSessions from "./ERLCSessions";
 
 import {
   useState,
@@ -422,11 +423,8 @@ export default function ERLCDashboard({
 
             {section ===
               "sessions" && (
-              <PlaceholderPage
-                eyebrow="Operations"
-                title="Sessions"
-                description="Track patrol sessions, attendance, duration and participation."
-                icon="◷"
+              <ERLCSessions
+                guildId={guildId}
                 connected={connected}
               />
             )}
