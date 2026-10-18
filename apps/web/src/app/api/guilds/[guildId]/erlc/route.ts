@@ -786,8 +786,12 @@ export async function POST(
         method,
 
         headers: {
-          "Content-Type":
-            "application/json",
+          ...(payload !== undefined
+            ? {
+                "Content-Type":
+                  "application/json",
+              }
+            : {}),
 
           "x-utilityx-internal-secret":
             secret,
