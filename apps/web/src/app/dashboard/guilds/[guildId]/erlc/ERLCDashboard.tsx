@@ -1,6 +1,8 @@
 "use client";
 
-import ERLCConnectionCard from "./ERLCConnection";
+import ERLCConnectionCard, {
+  useERLCConnection,
+} from "./ERLCConnection";
 
 import {
   useState,
@@ -32,6 +34,19 @@ export default function ERLCDashboard({
     useState<Section>(
       "overview"
     );
+
+  const {
+    connection,
+    live,
+    loading: erlcLoading,
+    error: erlcError,
+    refresh: refreshERLC,
+  } = useERLCConnection(
+    guildId
+  );
+
+  const connected =
+    Boolean(connection);
 
   const navigationGroups: {
     label: string;
@@ -329,10 +344,26 @@ export default function ERLCDashboard({
             <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-5 py-4 lg:px-8">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-zinc-600" />
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      connected
+                        ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.7)]"
+                        : "bg-zinc-600"
+                    }`}
+                  />
 
-                  <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-600">
-                    ER:LC not connected
+                  <p
+                    className={`truncate text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                      connected
+                        ? "text-emerald-400"
+                        : "text-zinc-600"
+                    }`}
+                  >
+                    {erlcLoading
+                      ? "Checking ER:LC"
+                      : connected
+                        ? "ER:LC connected"
+                        : "ER:LC not connected"}
                   </p>
                 </div>
 
@@ -351,9 +382,22 @@ export default function ERLCDashboard({
             {section ===
               "overview" && (
               <Overview
+                connected={connected}
+                connection={connection}
+                live={live}
+                loading={erlcLoading}
+                error={erlcError}
                 onConnect={() =>
                   setSection(
                     "settings"
+                  )
+                }
+                onRefresh={() =>
+                  void refreshERLC(true)
+                }
+                onLive={() =>
+                  setSection(
+                    "live"
                   )
                 }
               />
@@ -366,6 +410,7 @@ export default function ERLCDashboard({
                 title="Live Server"
                 description="Live ER:LC player, queue and server activity will appear here."
                 icon="●"
+                connected={connected}
               />
             )}
 
@@ -376,6 +421,7 @@ export default function ERLCDashboard({
                 title="Sessions"
                 description="Track patrol sessions, attendance, duration and participation."
                 icon="◷"
+                connected={connected}
               />
             )}
 
@@ -386,6 +432,7 @@ export default function ERLCDashboard({
                 title="Players"
                 description="View player activity, session history and linked Discord identities."
                 icon="♙"
+                connected={connected}
               />
             )}
 
@@ -396,6 +443,7 @@ export default function ERLCDashboard({
                 title="Staff Operations"
                 description="Measure real in-game staff coverage and activity."
                 icon="◇"
+                connected={connected}
               />
             )}
 
@@ -406,6 +454,7 @@ export default function ERLCDashboard({
                 title="Departments"
                 description="Manage agency activity, staffing and department performance."
                 icon="▦"
+                connected={connected}
               />
             )}
 
@@ -416,6 +465,7 @@ export default function ERLCDashboard({
                 title="Calls"
                 description="Monitor supported ER:LC calls and live operational activity."
                 icon="☷"
+                connected={connected}
               />
             )}
 
@@ -426,6 +476,7 @@ export default function ERLCDashboard({
                 title="RP Analytics"
                 description="Turn ER:LC activity into session, player and staff intelligence."
                 icon="↗"
+                connected={connected}
               />
             )}
 
@@ -433,6 +484,9 @@ export default function ERLCDashboard({
               "settings" && (
               <SettingsPage
                 guildId={guildId}
+                onConnectionChange={() =>
+                  void refreshERLC(false)
+                }
               />
             )}
           </section>
@@ -443,68 +497,196 @@ export default function ERLCDashboard({
 }
 
 function Overview({
+  connected,
+  connection,
+  live,
+  loading,
+  error,
   onConnect,
+  onRefresh,
+  onLive,
 }: {
+  connected: boolean;
+
+  connection:
+    | {
+        serverName: string | null;
+        currentPlayers: number;
+        maxPlayers: number;
+        joinCode: string | null;
+        lastCheckedAt: string | null;
+      }
+    | null;
+
+  live:
+    | {
+        name: string | null;
+        joinCode: string | null;
+        currentPlayers: number;
+        maxPlayers: number;
+        queue: unknown[];
+        players: unknown[];
+        staff: unknown;
+        emergencyCalls: unknown[];
+        vehicles: unknown[];
+        lastCheckedAt: string;
+      }
+    | null;
+
+  loading: boolean;
+  error: string;
   onConnect: () => void;
+  onRefresh: () => void;
+  onLive: () => void;
 }) {
+  const serverName =
+    live?.name ||
+    connection?.serverName ||
+    "ER:LC Private Server";
+
+  const currentPlayers =
+    live?.currentPlayers ??
+    connection?.currentPlayers ??
+    0;
+
+  const maxPlayers =
+    live?.maxPlayers ??
+    connection?.maxPlayers ??
+    0;
+
+  const queueCount =
+    live?.queue?.length ??
+    0;
+
+  const staffCount =
+    countStaff(
+      live?.staff
+    );
+
   return (
     <>
       <div className="relative overflow-hidden rounded-3xl border border-white/[0.07] bg-gradient-to-br from-sky-500/[0.08] via-white/[0.025] to-indigo-500/[0.05] px-6 py-8 shadow-2xl shadow-black/20 sm:px-8">
         <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-sky-500/[0.11] blur-[90px]" />
 
         <div className="relative max-w-3xl">
-          <span className="inline-flex rounded-full border border-sky-500/15 bg-sky-500/[0.08] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">
-            UtilityX ER:LC
+          <span
+            className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+              connected
+                ? "border-emerald-500/15 bg-emerald-500/[0.08] text-emerald-300"
+                : "border-sky-500/15 bg-sky-500/[0.08] text-sky-300"
+            }`}
+          >
+            {connected
+              ? "ER:LC Connected"
+              : "UtilityX ER:LC"}
           </span>
 
           <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-            RP Operations Center
+            {connected
+              ? serverName
+              : "RP Operations Center"}
           </h2>
 
           <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-500">
-            Connect your ER:LC private
-            server to unlock live
-            operations, sessions, player
-            intelligence and staff
-            analytics without changing
-            your Discord configuration.
+            {connected
+              ? "UtilityX is securely connected to this ER:LC private server. Live operations and RP intelligence can now use the connected server."
+              : "Connect your ER:LC private server to unlock live operations, sessions, player intelligence and staff analytics without changing your Discord configuration."}
           </p>
 
-          <button
-            type="button"
-            onClick={
-              onConnect
-            }
-            className="mt-6 rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400"
-          >
-            Connect ER:LC Server
-          </button>
+          <div className="mt-6 flex flex-wrap gap-3">
+            {connected ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onLive}
+                  className="rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400"
+                >
+                  Open Live Server
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onRefresh}
+                  disabled={loading}
+                  className="rounded-xl border border-white/[0.08] bg-white/[0.035] px-5 py-2.5 text-sm font-semibold text-zinc-300 transition hover:bg-white/[0.07] disabled:opacity-50"
+                >
+                  {loading
+                    ? "Refreshing..."
+                    : "Refresh Status"}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={onConnect}
+                className="rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400"
+              >
+                Connect ER:LC Server
+              </button>
+            )}
+          </div>
+
+          {error && (
+            <div className="mt-5 rounded-xl border border-amber-500/15 bg-amber-500/[0.05] px-4 py-3 text-sm text-amber-300">
+              {error}
+            </div>
+          )}
         </div>
       </div>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Server Status"
-          value="Not Connected"
-          detail="Connect ER:LC to begin"
+          value={
+            loading
+              ? "Checking"
+              : connected
+                ? "Connected"
+                : "Not Connected"
+          }
+          detail={
+            connected
+              ? serverName
+              : "Connect ER:LC to begin"
+          }
         />
 
         <MetricCard
           label="Players"
-          value="—"
+          value={
+            connected
+              ? `${currentPlayers}${
+                  maxPlayers > 0
+                    ? ` / ${maxPlayers}`
+                    : ""
+                }`
+              : "—"
+          }
           detail="Live player count"
         />
 
         <MetricCard
           label="Staff Online"
-          value="—"
+          value={
+            connected
+              ? live
+                ? String(staffCount)
+                : "—"
+              : "—"
+          }
           detail="In-game staff coverage"
         />
 
         <MetricCard
-          label="Current Session"
-          value="—"
-          detail="No active session"
+          label="Queue"
+          value={
+            connected
+              ? live
+                ? String(queueCount)
+                : "—"
+              : "—"
+          }
+          detail="Players waiting to join"
         />
       </div>
 
@@ -520,19 +702,28 @@ function Overview({
 
           <div className="mt-6 flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-white/[0.08] bg-black/10">
             <div className="max-w-sm text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/[0.08] text-xl text-sky-300">
-                ●
+              <div
+                className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl text-xl ${
+                  connected
+                    ? "bg-emerald-500/[0.08] text-emerald-300"
+                    : "bg-sky-500/[0.08] text-sky-300"
+                }`}
+              >
+                {connected
+                  ? "✓"
+                  : "●"}
               </div>
 
               <p className="mt-4 font-semibold text-zinc-300">
-                Waiting for ER:LC
+                {connected
+                  ? "ER:LC is connected"
+                  : "Waiting for ER:LC"}
               </p>
 
               <p className="mt-2 text-sm leading-6 text-zinc-600">
-                Once connected, live
-                players, sessions and
-                server activity will appear
-                here.
+                {connected
+                  ? `${serverName} is connected to UtilityX. Open Live Server to view current operational data.`
+                  : "Once connected, live players, sessions and server activity will appear here."}
               </p>
             </div>
           </div>
@@ -549,18 +740,32 @@ function Overview({
 
           <div className="mt-6 space-y-3">
             <InsightPlaceholder
-              title="Session Intelligence"
-              detail="Peak activity, attendance and participation."
+              title="Connection"
+              detail={
+                connected
+                  ? "ER:LC data source is online and ready."
+                  : "Connect ER:LC to activate RP intelligence."
+              }
             />
 
             <InsightPlaceholder
-              title="Staff Coverage"
-              detail="See when your RP server lacks staff."
+              title="Server"
+              detail={
+                connected
+                  ? serverName
+                  : "No ER:LC server connected."
+              }
             />
 
             <InsightPlaceholder
-              title="Player Activity"
-              detail="Understand who actually participates in sessions."
+              title="Join Code"
+              detail={
+                connected
+                  ? live?.joinCode ||
+                    connection?.joinCode ||
+                    "Unavailable"
+                  : "Unavailable"
+              }
             />
           </div>
         </section>
@@ -569,10 +774,50 @@ function Overview({
   );
 }
 
+function countStaff(
+  value: unknown
+) {
+  if (
+    Array.isArray(value)
+  ) {
+    return value.length;
+  }
+
+  if (
+    value &&
+    typeof value ===
+      "object"
+  ) {
+    let count = 0;
+
+    for (
+      const item of Object.values(
+        value as Record<
+          string,
+          unknown
+        >
+      )
+    ) {
+      if (
+        Array.isArray(item)
+      ) {
+        count +=
+          item.length;
+      }
+    }
+
+    return count;
+  }
+
+  return 0;
+}
+
 function SettingsPage({
   guildId,
+  onConnectionChange,
 }: {
   guildId: string;
+  onConnectionChange: () => void;
 }) {
   return (
     <>
@@ -585,6 +830,9 @@ function SettingsPage({
       <div className="mt-5">
         <ERLCConnectionCard
           guildId={guildId}
+          onConnectionChange={
+            onConnectionChange
+          }
         />
       </div>
 
@@ -614,11 +862,13 @@ function PlaceholderPage({
   title,
   description,
   icon,
+  connected,
 }: {
   eyebrow: string;
   title: string;
   description: string;
   icon: string;
+  connected: boolean;
 }) {
   return (
     <>
@@ -635,14 +885,15 @@ function PlaceholderPage({
           </div>
 
           <h3 className="mt-5 text-lg font-semibold">
-            Connect ER:LC first
+            {connected
+              ? "ER:LC connected"
+              : "Connect ER:LC first"}
           </h3>
 
           <p className="mt-2 text-sm leading-6 text-zinc-600">
-            This area is isolated from
-            UtilityX Discord management
-            and will become active after
-            an ER:LC server is connected.
+            {connected
+              ? "The ER:LC connection is active. This module is ready for its live UtilityX feature implementation."
+              : "This area is isolated from UtilityX Discord management and will become active after an ER:LC server is connected."}
           </p>
         </div>
       </div>

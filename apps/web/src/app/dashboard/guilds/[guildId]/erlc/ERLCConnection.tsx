@@ -224,8 +224,10 @@ export function useERLCConnection(
 
 export default function ERLCConnectionCard({
   guildId,
+  onConnectionChange,
 }: {
   guildId: string;
+  onConnectionChange?: () => void;
 }) {
   const {
     connection,
@@ -299,6 +301,8 @@ export default function ERLCConnectionCard({
       setServerKey("");
 
       await refresh(true);
+
+      onConnectionChange?.();
     } catch (error) {
       setError(
         error instanceof Error
@@ -341,6 +345,8 @@ export default function ERLCConnectionCard({
             "Unable to disconnect ER:LC."
         );
       }
+
+      onConnectionChange?.();
 
       window.location.reload();
     } catch (error) {
