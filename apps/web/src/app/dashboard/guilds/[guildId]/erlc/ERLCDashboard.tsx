@@ -1,5 +1,7 @@
 "use client";
 
+import ERLCConnectionCard from "./ERLCConnection";
+
 import {
   useState,
 } from "react";
@@ -429,7 +431,9 @@ export default function ERLCDashboard({
 
             {section ===
               "settings" && (
-              <SettingsPage />
+              <SettingsPage
+                guildId={guildId}
+              />
             )}
           </section>
         </div>
@@ -565,43 +569,41 @@ function Overview({
   );
 }
 
-function SettingsPage() {
+function SettingsPage({
+  guildId,
+}: {
+  guildId: string;
+}) {
   return (
     <>
       <PageHeader
         eyebrow="Configuration"
         title="ER:LC Settings"
-        description="Connect and configure the ER:LC server associated with this Discord community."
+        description="Connect and configure the ER:LC private server associated with this Discord community."
       />
+
+      <div className="mt-5">
+        <ERLCConnectionCard
+          guildId={guildId}
+        />
+      </div>
 
       <div className="mt-5 rounded-3xl border border-white/[0.07] bg-white/[0.018] p-6">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-400">
-          Connection
+          Security
         </p>
 
         <h3 className="mt-2 text-lg font-bold">
-          Private Server
+          Credential Protection
         </h3>
 
         <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
-          ER:LC connection setup will
-          live here. The server key will
-          be encrypted and stored
-          server-side — never inside the
-          browser or source code.
+          ER:LC Server Keys are encrypted
+          by the UtilityX API before being
+          stored. Saved credentials are
+          never returned to the browser,
+          dashboard or Discord bot.
         </p>
-
-        <div className="mt-6 rounded-2xl border border-dashed border-sky-500/15 bg-sky-500/[0.025] p-6">
-          <p className="font-semibold text-zinc-300">
-            Connection system coming next
-          </p>
-
-          <p className="mt-2 text-sm text-zinc-600">
-            Next we will add secure key
-            storage, validation and live
-            ER:LC server status.
-          </p>
-        </div>
       </div>
     </>
   );

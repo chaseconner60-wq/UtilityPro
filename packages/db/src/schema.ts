@@ -603,3 +603,54 @@ export const guildStaffMembers = pgTable(
     }),
   ]
 );
+
+
+export const erlcConnections = pgTable(
+  "erlc_connections",
+  {
+    guildId: text("guild_id").primaryKey(),
+
+    serverKeyEncrypted: text("server_key_encrypted")
+      .notNull(),
+
+    serverKeyIv: text("server_key_iv")
+      .notNull(),
+
+    serverKeyAuthTag: text("server_key_auth_tag")
+      .notNull(),
+
+    internalServerId: text("internal_server_id"),
+
+    serverName: text("server_name"),
+
+    joinCode: text("join_code"),
+
+    currentPlayers: integer("current_players")
+      .notNull()
+      .default(0),
+
+    maxPlayers: integer("max_players")
+      .notNull()
+      .default(0),
+
+    connectionStatus: text("connection_status")
+      .notNull()
+      .default("connected"),
+
+    lastCheckedAt: timestamp("last_checked_at", {
+      withTimezone: true,
+    }),
+
+    connectedAt: timestamp("connected_at", {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp("updated_at", {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  }
+);

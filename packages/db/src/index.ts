@@ -28,4 +28,5 @@ export {
   healthDailyActiveMembers,
   healthMemberLifecycle,
   guildStaffMembers,
+  erlcConnections,
 } from "./schema.js";

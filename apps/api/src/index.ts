@@ -1,4 +1,15 @@
 import Fastify from "fastify";
+
+import {
+  encryptErlcServerKey,
+  decryptErlcServerKey,
+} from "./erlcCrypto.js";
+
+import {
+  fetchErlcSnapshot,
+  getInternalServerId,
+  ErlcApiError,
+} from "./erlcClient.js";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import { and, desc, eq, sql } from "drizzle-orm";
@@ -23,6 +34,7 @@ import {
   guildActions,
   warnings,
   moderationActions,
+  erlcConnections,
 } from "@utilityx/db";
 
 const app = Fastify({
@@ -1185,6 +1197,602 @@ app.get<{
     };
   }
 );
+
+
+//
+// ============================================================
+// ER:LC CONNECTIONS
+// ============================================================
+//
+
+app.get<{
+  Params: {
+    guildId: string;
+  };
+}>(
+  "/internal/erlc/:guildId",
+  async (request, reply) => {
+    const header =
+      request.headers[
+        "x-utilityx-internal-secret"
+      ];
+
+    if (
+      !internalAuthorized(
+        typeof header ===
+          "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply
+        .code(401)
+        .send({
+          error:
+            "Unauthorized",
+        });
+    }
+
+    const {
+      guildId,
+    } = request.params;
+
+    const [connection] =
+      await db
+        .select()
+        .from(
+          erlcConnections
+        )
+        .where(
+          eq(
+            erlcConnections.guildId,
+            guildId
+          )
+        )
+        .limit(1);
+
+    if (!connection) {
+      return {
+        connected: false,
+        connection: null,
+      };
+    }
+
+    return {
+      connected: true,
+
+      connection: {
+        guildId:
+          connection.guildId,
+
+        internalServerId:
+          connection.internalServerId,
+
+        serverName:
+          connection.serverName,
+
+        joinCode:
+          connection.joinCode,
+
+        currentPlayers:
+          connection.currentPlayers,
+
+        maxPlayers:
+          connection.maxPlayers,
+
+        status:
+          connection.connectionStatus,
+
+        lastCheckedAt:
+          connection.lastCheckedAt,
+
+        connectedAt:
+          connection.connectedAt,
+
+        updatedAt:
+          connection.updatedAt,
+      },
+    };
+  }
+);
+
+app.put<{
+  Params: {
+    guildId: string;
+  };
+
+  Body: {
+    serverKey?: string;
+  };
+}>(
+  "/internal/erlc/:guildId",
+  async (request, reply) => {
+    const header =
+      request.headers[
+        "x-utilityx-internal-secret"
+      ];
+
+    if (
+      !internalAuthorized(
+        typeof header ===
+          "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply
+        .code(401)
+        .send({
+          error:
+            "Unauthorized",
+        });
+    }
+
+    const {
+      guildId,
+    } = request.params;
+
+    const serverKey =
+      request.body
+        ?.serverKey
+        ?.trim();
+
+    if (
+      !serverKey ||
+      serverKey.length < 10
+    ) {
+      return reply
+        .code(400)
+        .send({
+          error:
+            "Enter a valid ER:LC Server Key.",
+        });
+    }
+
+    const [installedGuild] =
+      await db
+        .select({
+          id: guilds.id,
+        })
+        .from(guilds)
+        .where(
+          eq(
+            guilds.id,
+            guildId
+          )
+        )
+        .limit(1);
+
+    if (!installedGuild) {
+      return reply
+        .code(404)
+        .send({
+          error:
+            "Discord server not found.",
+        });
+    }
+
+    let snapshot;
+
+    try {
+      snapshot =
+        await fetchErlcSnapshot(
+          serverKey
+        );
+    } catch (error) {
+      if (
+        error instanceof
+        ErlcApiError
+      ) {
+        return reply
+          .code(
+            error.status >=
+              400 &&
+            error.status < 500
+              ? error.status
+              : 502
+          )
+          .send({
+            error:
+              error.message,
+          });
+      }
+
+      request.log.error(
+        error,
+        "ER:LC connection validation failed."
+      );
+
+      return reply
+        .code(502)
+        .send({
+          error:
+            "UtilityX could not reach ER:LC.",
+        });
+    }
+
+    const encrypted =
+      encryptErlcServerKey(
+        serverKey
+      );
+
+    const now =
+      new Date();
+
+    await db
+      .insert(
+        erlcConnections
+      )
+      .values({
+        guildId,
+
+        serverKeyEncrypted:
+          encrypted.encrypted,
+
+        serverKeyIv:
+          encrypted.iv,
+
+        serverKeyAuthTag:
+          encrypted.authTag,
+
+        internalServerId:
+          getInternalServerId(
+            serverKey
+          ),
+
+        serverName:
+          snapshot.name,
+
+        joinCode:
+          snapshot.joinCode,
+
+        currentPlayers:
+          snapshot.currentPlayers,
+
+        maxPlayers:
+          snapshot.maxPlayers,
+
+        connectionStatus:
+          "connected",
+
+        lastCheckedAt:
+          now,
+
+        connectedAt:
+          now,
+
+        updatedAt:
+          now,
+      })
+      .onConflictDoUpdate({
+        target:
+          erlcConnections.guildId,
+
+        set: {
+          serverKeyEncrypted:
+            encrypted.encrypted,
+
+          serverKeyIv:
+            encrypted.iv,
+
+          serverKeyAuthTag:
+            encrypted.authTag,
+
+          internalServerId:
+            getInternalServerId(
+              serverKey
+            ),
+
+          serverName:
+            snapshot.name,
+
+          joinCode:
+            snapshot.joinCode,
+
+          currentPlayers:
+            snapshot.currentPlayers,
+
+          maxPlayers:
+            snapshot.maxPlayers,
+
+          connectionStatus:
+            "connected",
+
+          lastCheckedAt:
+            now,
+
+          updatedAt:
+            now,
+        },
+      });
+
+    return {
+      success: true,
+
+      connection: {
+        guildId,
+
+        serverName:
+          snapshot.name,
+
+        joinCode:
+          snapshot.joinCode,
+
+        currentPlayers:
+          snapshot.currentPlayers,
+
+        maxPlayers:
+          snapshot.maxPlayers,
+
+        status:
+          "connected",
+
+        lastCheckedAt:
+          now.toISOString(),
+      },
+    };
+  }
+);
+
+app.get<{
+  Params: {
+    guildId: string;
+  };
+}>(
+  "/internal/erlc/:guildId/live",
+  async (request, reply) => {
+    const header =
+      request.headers[
+        "x-utilityx-internal-secret"
+      ];
+
+    if (
+      !internalAuthorized(
+        typeof header ===
+          "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply
+        .code(401)
+        .send({
+          error:
+            "Unauthorized",
+        });
+    }
+
+    const {
+      guildId,
+    } = request.params;
+
+    const [connection] =
+      await db
+        .select()
+        .from(
+          erlcConnections
+        )
+        .where(
+          eq(
+            erlcConnections.guildId,
+            guildId
+          )
+        )
+        .limit(1);
+
+    if (!connection) {
+      return reply
+        .code(404)
+        .send({
+          error:
+            "ER:LC is not connected.",
+        });
+    }
+
+    let serverKey;
+
+    try {
+      serverKey =
+        decryptErlcServerKey(
+          connection.serverKeyEncrypted,
+          connection.serverKeyIv,
+          connection.serverKeyAuthTag
+        );
+    } catch (error) {
+      request.log.error(
+        error,
+        "Unable to decrypt ER:LC Server Key."
+      );
+
+      return reply
+        .code(500)
+        .send({
+          error:
+            "Unable to read the saved ER:LC connection.",
+        });
+    }
+
+    try {
+      const snapshot =
+        await fetchErlcSnapshot(
+          serverKey
+        );
+
+      const now =
+        new Date();
+
+      await db
+        .update(
+          erlcConnections
+        )
+        .set({
+          serverName:
+            snapshot.name,
+
+          joinCode:
+            snapshot.joinCode,
+
+          currentPlayers:
+            snapshot.currentPlayers,
+
+          maxPlayers:
+            snapshot.maxPlayers,
+
+          connectionStatus:
+            "connected",
+
+          lastCheckedAt:
+            now,
+
+          updatedAt:
+            now,
+        })
+        .where(
+          eq(
+            erlcConnections.guildId,
+            guildId
+          )
+        );
+
+      return {
+        connected: true,
+
+        server: {
+          name:
+            snapshot.name,
+
+          joinCode:
+            snapshot.joinCode,
+
+          currentPlayers:
+            snapshot.currentPlayers,
+
+          maxPlayers:
+            snapshot.maxPlayers,
+
+          queue:
+            snapshot.queue,
+
+          players:
+            snapshot.players,
+
+          staff:
+            snapshot.staff,
+
+          emergencyCalls:
+            snapshot.emergencyCalls,
+
+          vehicles:
+            snapshot.vehicles,
+
+          lastCheckedAt:
+            now.toISOString(),
+        },
+      };
+    } catch (error) {
+      await db
+        .update(
+          erlcConnections
+        )
+        .set({
+          connectionStatus:
+            "error",
+
+          lastCheckedAt:
+            new Date(),
+
+          updatedAt:
+            new Date(),
+        })
+        .where(
+          eq(
+            erlcConnections.guildId,
+            guildId
+          )
+        );
+
+      if (
+        error instanceof
+        ErlcApiError
+      ) {
+        return reply
+          .code(
+            error.status >=
+              400 &&
+            error.status < 500
+              ? error.status
+              : 502
+          )
+          .send({
+            error:
+              error.message,
+          });
+      }
+
+      request.log.error(
+        error,
+        "ER:LC live request failed."
+      );
+
+      return reply
+        .code(502)
+        .send({
+          error:
+            "Unable to reach ER:LC.",
+        });
+    }
+  }
+);
+
+app.delete<{
+  Params: {
+    guildId: string;
+  };
+}>(
+  "/internal/erlc/:guildId",
+  async (request, reply) => {
+    const header =
+      request.headers[
+        "x-utilityx-internal-secret"
+      ];
+
+    if (
+      !internalAuthorized(
+        typeof header ===
+          "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply
+        .code(401)
+        .send({
+          error:
+            "Unauthorized",
+        });
+    }
+
+    const {
+      guildId,
+    } = request.params;
+
+    await db
+      .delete(
+        erlcConnections
+      )
+      .where(
+        eq(
+          erlcConnections.guildId,
+          guildId
+        )
+      );
+
+    return {
+      success: true,
+    };
+  }
+);
+
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "0.0.0.0";
