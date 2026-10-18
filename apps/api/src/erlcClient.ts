@@ -144,7 +144,7 @@ export async function fetchErlcSnapshot(
       response.status === 403
     ) {
       message =
-        "ER:LC rejected the Server Key. Check the key and API access.";
+        `ER:LC authentication failed (${response.status}): ${message}`;
     }
 
     if (
