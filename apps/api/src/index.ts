@@ -22,6 +22,10 @@ import {
   getErlcPlayerHistory,
   startErlcPlayerTracker,
 } from "./erlcPlayerTracker.js";
+
+import {
+  getErlcOperationsView,
+} from "./erlcOperations.js";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import { and, desc, eq, sql } from "drizzle-orm";
@@ -1964,6 +1968,101 @@ app.get<{
     return {
       players,
     };
+  }
+);
+
+
+app.get<{
+  Params: {
+    guildId: string;
+    section: string;
+  };
+}>(
+  "/internal/erlc/:guildId/operations/:section",
+  async (
+    request,
+    reply
+  ) => {
+    const header =
+      request.headers[
+        "x-utilityx-internal-secret"
+      ];
+
+    if (
+      !internalAuthorized(
+        typeof header ===
+          "string"
+          ? header
+          : undefined
+      )
+    ) {
+      return reply
+        .code(401)
+        .send({
+          error:
+            "Unauthorized",
+        });
+    }
+
+    const allowed =
+      new Set([
+        "staff",
+        "departments",
+        "calls",
+        "analytics",
+      ]);
+
+    if (
+      !allowed.has(
+        request.params.section
+      )
+    ) {
+      return reply
+        .code(404)
+        .send({
+          error:
+            "Unknown ER:LC operations section.",
+        });
+    }
+
+    try {
+      return await getErlcOperationsView(
+        request.params.guildId,
+        request.params.section
+      );
+    } catch (error) {
+      if (
+        error instanceof
+        ErlcApiError
+      ) {
+        return reply
+          .code(
+            error.status
+          )
+          .send({
+            error:
+              error.message,
+          });
+      }
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to load ER:LC operations.";
+
+      const status =
+        message ===
+        "ER:LC is not connected."
+          ? 404
+          : 500;
+
+      return reply
+        .code(status)
+        .send({
+          error:
+            message,
+        });
+    }
   }
 );
 

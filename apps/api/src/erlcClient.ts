@@ -605,3 +605,541 @@ function normalizeErlcPlayer(
     callsign,
   };
 }
+
+export type ErlcStaffMember = {
+  userId: string | null;
+  name: string;
+  role: string;
+};
+
+export type ErlcEmergencyCall = {
+  callNumber: string | null;
+  team: string | null;
+  callerId: string | null;
+  playerIds: string[];
+  description: string | null;
+  location: string | null;
+  startedAt: string | null;
+};
+
+async function fetchErlcFocusedSection(
+  serverKey: string,
+  query: string
+): Promise<Record<string, unknown>> {
+  const apiBase =
+    (
+      process.env.ERLC_API_BASE_URL ||
+      DEFAULT_ERLC_API
+    ).replace(/\/+$/, "");
+
+  const controller =
+    new AbortController();
+
+  const timeout =
+    setTimeout(
+      () => controller.abort(),
+      10_000
+    );
+
+  let response: Response;
+
+  try {
+    response =
+      await fetch(
+        `${apiBase}/v2/server?${query}=true`,
+        {
+          method: "GET",
+
+          headers: {
+            "Server-Key":
+              serverKey,
+
+            Accept:
+              "application/json",
+          },
+
+          signal:
+            controller.signal,
+        }
+      );
+  } catch (error) {
+    clearTimeout(
+      timeout
+    );
+
+    throw new ErlcApiError(
+      error instanceof Error
+        ? error.message
+        : "Unable to reach ER:LC.",
+      502
+    );
+  }
+
+  clearTimeout(
+    timeout
+  );
+
+  if (!response.ok) {
+    const message =
+      await errorMessage(
+        response
+      );
+
+    throw new ErlcApiError(
+      message,
+      response.status
+    );
+  }
+
+  return (
+    await response.json()
+  ) as Record<
+    string,
+    unknown
+  >;
+}
+
+function parsePlayerIdentity(
+  value: unknown
+): {
+  name: string | null;
+  userId: string | null;
+} {
+  if (
+    typeof value ===
+    "number"
+  ) {
+    return {
+      name: null,
+      userId:
+        String(value),
+    };
+  }
+
+  if (
+    typeof value !==
+    "string"
+  ) {
+    return {
+      name: null,
+      userId: null,
+    };
+  }
+
+  const text =
+    value.trim();
+
+  const colon =
+    text.lastIndexOf(
+      ":"
+    );
+
+  if (
+    colon > 0 &&
+    /^\d+$/.test(
+      text
+        .slice(
+          colon + 1
+        )
+        .trim()
+    )
+  ) {
+    return {
+      name:
+        text
+          .slice(
+            0,
+            colon
+          )
+          .trim(),
+
+      userId:
+        text
+          .slice(
+            colon + 1
+          )
+          .trim(),
+    };
+  }
+
+  if (
+    /^\d+$/.test(
+      text
+    )
+  ) {
+    return {
+      name: null,
+      userId:
+        text,
+    };
+  }
+
+  return {
+    name:
+      text,
+    userId:
+      null,
+  };
+}
+
+export async function fetchErlcStaff(
+  serverKey: string
+): Promise<ErlcStaffMember[]> {
+  const raw =
+    await fetchErlcFocusedSection(
+      serverKey,
+      "Staff"
+    );
+
+  const section =
+    raw.Staff ??
+    raw.staff ??
+    [];
+
+  const results:
+    ErlcStaffMember[] =
+      [];
+
+  function walk(
+    value: unknown,
+    roleHint =
+      "Staff"
+  ) {
+    if (
+      value === null ||
+      value === undefined
+    ) {
+      return;
+    }
+
+    if (
+      Array.isArray(
+        value
+      )
+    ) {
+      for (
+        const item
+        of value
+      ) {
+        walk(
+          item,
+          roleHint
+        );
+      }
+
+      return;
+    }
+
+    if (
+      typeof value ===
+        "string" ||
+      typeof value ===
+        "number"
+    ) {
+      const identity =
+        parsePlayerIdentity(
+          value
+        );
+
+      if (
+        identity.name ||
+        identity.userId
+      ) {
+        results.push({
+          name:
+            identity.name ??
+            "Unknown Staff",
+
+          userId:
+            identity.userId,
+
+          role:
+            roleHint,
+        });
+      }
+
+      return;
+    }
+
+    if (
+      typeof value !==
+      "object"
+    ) {
+      return;
+    }
+
+    const row =
+      value as Record<
+        string,
+        unknown
+      >;
+
+    const directIdentity =
+      row.Player ??
+      row.player ??
+      row.Name ??
+      row.name ??
+      row.Username ??
+      row.username;
+
+    const directUserId =
+      row.UserId ??
+      row.userId ??
+      row.UserID ??
+      row.robloxId ??
+      row.RobloxId;
+
+    const directRole =
+      textValue(
+        row.Permission
+      ) ??
+      textValue(
+        row.permission
+      ) ??
+      textValue(
+        row.Role
+      ) ??
+      textValue(
+        row.role
+      ) ??
+      roleHint;
+
+    if (
+      directIdentity !==
+        undefined ||
+      directUserId !==
+        undefined
+    ) {
+      const identity =
+        parsePlayerIdentity(
+          directIdentity
+        );
+
+      const idIdentity =
+        parsePlayerIdentity(
+          directUserId
+        );
+
+      results.push({
+        name:
+          identity.name ??
+          textValue(
+            row.Username
+          ) ??
+          textValue(
+            row.username
+          ) ??
+          textValue(
+            row.Name
+          ) ??
+          textValue(
+            row.name
+          ) ??
+          "Unknown Staff",
+
+        userId:
+          identity.userId ??
+          idIdentity.userId,
+
+        role:
+          directRole,
+      });
+
+      return;
+    }
+
+    for (
+      const [
+        key,
+        nested,
+      ] of Object.entries(
+        row
+      )
+    ) {
+      walk(
+        nested,
+        key
+      );
+    }
+  }
+
+  walk(
+    section
+  );
+
+  const unique =
+    new Map<
+      string,
+      ErlcStaffMember
+    >();
+
+  for (
+    const member
+    of results
+  ) {
+    const key =
+      member.userId ??
+      `${member.role}:${member.name}`;
+
+    unique.set(
+      key,
+      member
+    );
+  }
+
+  return [
+    ...unique.values(),
+  ];
+}
+
+export async function fetchErlcEmergencyCalls(
+  serverKey: string
+): Promise<ErlcEmergencyCall[]> {
+  const raw =
+    await fetchErlcFocusedSection(
+      serverKey,
+      "EmergencyCalls"
+    );
+
+  const source =
+    Array.isArray(
+      raw.EmergencyCalls
+    )
+      ? raw.EmergencyCalls
+      : Array.isArray(
+          raw.emergencyCalls
+        )
+        ? raw.emergencyCalls
+        : [];
+
+  return source.map(
+    (
+      value,
+      index
+    ) => {
+      const row =
+        value &&
+        typeof value ===
+          "object"
+          ? value as Record<
+              string,
+              unknown
+            >
+          : {};
+
+      const playerSource =
+        row.Players ??
+        row.players ??
+        row.PlayerIds ??
+        row.playerIds;
+
+      const playerIds =
+        Array.isArray(
+          playerSource
+        )
+          ? playerSource.map(
+              (item) =>
+                String(
+                  item
+                )
+            )
+          : [];
+
+      const startedRaw =
+        row.StartedAt ??
+        row.startedAt ??
+        row.StartTime ??
+        row.startTime ??
+        row.Timestamp ??
+        row.timestamp;
+
+      let startedAt:
+        | string
+        | null = null;
+
+      if (
+        typeof startedRaw ===
+        "number"
+      ) {
+        const millis =
+          startedRaw >
+          10_000_000_000
+            ? startedRaw
+            : startedRaw *
+              1000;
+
+        startedAt =
+          new Date(
+            millis
+          ).toISOString();
+      } else if (
+        typeof startedRaw ===
+        "string"
+      ) {
+        startedAt =
+          startedRaw;
+      }
+
+      return {
+        callNumber:
+          textValue(
+            row.CallNumber
+          ) ??
+          textValue(
+            row.callNumber
+          ) ??
+          String(
+            index + 1
+          ),
+
+        team:
+          textValue(
+            row.Team
+          ) ??
+          textValue(
+            row.team
+          ),
+
+        callerId:
+          textValue(
+            row.Caller
+          ) ??
+          textValue(
+            row.caller
+          ) ??
+          textValue(
+            row.CallerId
+          ) ??
+          textValue(
+            row.callerId
+          ),
+
+        playerIds,
+
+        description:
+          textValue(
+            row.Description
+          ) ??
+          textValue(
+            row.description
+          ),
+
+        location:
+          textValue(
+            row.PositionDescriptor
+          ) ??
+          textValue(
+            row.positionDescriptor
+          ) ??
+          textValue(
+            row.Location
+          ) ??
+          textValue(
+            row.location
+          ),
+
+        startedAt,
+      };
+    }
+  );
+}

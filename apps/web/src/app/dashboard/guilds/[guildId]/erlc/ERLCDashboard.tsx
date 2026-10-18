@@ -7,6 +7,7 @@ import ERLCConnectionCard, {
 import ERLCLiveServer from "./ERLCLiveServer";
 import ERLCSessions from "./ERLCSessions";
 import ERLCPlayers from "./ERLCPlayers";
+import ERLCOperations from "./ERLCOperations";
 
 import {
   useState,
@@ -440,45 +441,37 @@ export default function ERLCDashboard({
 
             {section ===
               "staff" && (
-              <PlaceholderPage
-                eyebrow="Roleplay"
-                title="Staff Operations"
-                description="Measure real in-game staff coverage and activity."
-                icon="◇"
+              <ERLCOperations
+                guildId={guildId}
                 connected={connected}
+                mode="staff"
               />
             )}
 
             {section ===
               "departments" && (
-              <PlaceholderPage
-                eyebrow="Roleplay"
-                title="Departments"
-                description="Manage agency activity, staffing and department performance."
-                icon="▦"
+              <ERLCOperations
+                guildId={guildId}
                 connected={connected}
+                mode="departments"
               />
             )}
 
             {section ===
               "calls" && (
-              <PlaceholderPage
-                eyebrow="Roleplay"
-                title="Calls"
-                description="Monitor supported ER:LC calls and live operational activity."
-                icon="☷"
+              <ERLCOperations
+                guildId={guildId}
                 connected={connected}
+                mode="calls"
               />
             )}
 
             {section ===
               "analytics" && (
-              <PlaceholderPage
-                eyebrow="Intelligence"
-                title="RP Analytics"
-                description="Turn ER:LC activity into session, player and staff intelligence."
-                icon="↗"
+              <ERLCOperations
+                guildId={guildId}
                 connected={connected}
+                mode="analytics"
               />
             )}
 

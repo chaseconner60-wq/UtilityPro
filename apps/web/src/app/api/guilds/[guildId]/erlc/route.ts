@@ -394,9 +394,27 @@ export async function GET(
       "userId"
     );
 
+  const operationsView =
+    url.searchParams.get(
+      "view"
+    );
+
+  const allowedOperations =
+    new Set([
+      "staff",
+      "departments",
+      "calls",
+      "analytics",
+    ]);
+
   const target =
-    history
-      ? `${apiUrl}/internal/erlc/${guildId}/player-history${
+    operationsView &&
+    allowedOperations.has(
+      operationsView
+    )
+      ? `${apiUrl}/internal/erlc/${guildId}/operations/${operationsView}`
+      : history
+        ? `${apiUrl}/internal/erlc/${guildId}/player-history${
           historyUserId
             ? `?userId=${encodeURIComponent(historyUserId)}`
             : ""
