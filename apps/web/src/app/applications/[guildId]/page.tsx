@@ -175,7 +175,7 @@ export default function ApplicationsPortal() {
 
       if (
         response.status ===
-        403
+        401
       ) {
         window.location.href =
           "/api/auth/discord";

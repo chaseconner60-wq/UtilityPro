@@ -12,17 +12,34 @@ const ADMINISTRATOR =
 const MANAGE_GUILD =
   BigInt("32");
 
+const AUTH_CACHE_TTL =
+  5 * 60 * 1000;
+
 export type DiscordIdentity = {
   id: string;
   username: string;
   avatar: string | null;
 };
 
-export async function getDiscordIdentity():
-  Promise<
-    DiscordIdentity |
-    null
-  > {
+type PermissionResult = {
+  allowed: boolean;
+  authenticated: boolean;
+  identity: DiscordIdentity | null;
+  temporaryFailure?: boolean;
+};
+
+type CachedPermission = {
+  expiresAt: number;
+  result: PermissionResult;
+};
+
+const permissionCache =
+  new Map<
+    string,
+    CachedPermission
+  >();
+
+async function getSession() {
   const cookieStore =
     await cookies();
 
@@ -35,20 +52,44 @@ export async function getDiscordIdentity():
     return null;
   }
 
-  let session;
-
   try {
-    session =
+    const session =
       await decryptSession(
         cookie.value
       );
+
+    if (
+      !session.accessToken
+    ) {
+      return null;
+    }
+
+    return session;
   } catch {
     return null;
   }
+}
 
-  if (
-    !session.accessToken
-  ) {
+function avatarUrl(
+  user: {
+    id: string;
+    avatar?: string | null;
+  }
+) {
+  return user.avatar
+    ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=256`
+    : null;
+}
+
+export async function getDiscordIdentity():
+  Promise<
+    DiscordIdentity |
+    null
+  > {
+  const session =
+    await getSession();
+
+  if (!session) {
     return null;
   }
 
@@ -83,52 +124,44 @@ export async function getDiscordIdentity():
       "Discord User",
 
     avatar:
-      user.avatar
-        ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=256`
-        : null,
+      avatarUrl(user),
   };
 }
 
 export async function canManageApplicationGuild(
   guildId: string
-) {
-  const cookieStore =
-    await cookies();
+): Promise<PermissionResult> {
+  const session =
+    await getSession();
 
-  const cookie =
-    cookieStore.get(
-      "utilityx_session"
+  if (!session) {
+    return {
+      allowed: false,
+      authenticated: false,
+      identity: null,
+    };
+  }
+
+  const cacheKey =
+    `${guildId}:${session.accessToken}`;
+
+  const cached =
+    permissionCache.get(
+      cacheKey
     );
 
-  if (!cookie) {
-    return {
-      allowed: false,
-      identity: null,
-    };
-  }
-
-  let session;
-
-  try {
-    session =
-      await decryptSession(
-        cookie.value
-      );
-  } catch {
-    return {
-      allowed: false,
-      identity: null,
-    };
-  }
-
   if (
-    !session.accessToken
+    cached &&
+    cached.expiresAt >
+      Date.now()
   ) {
-    return {
-      allowed: false,
-      identity: null,
-    };
+    return cached.result;
   }
+
+  const headers = {
+    Authorization:
+      `Bearer ${session.accessToken}`,
+  };
 
   const [
     userResponse,
@@ -138,11 +171,7 @@ export async function canManageApplicationGuild(
       fetch(
         "https://discord.com/api/users/@me",
         {
-          headers: {
-            Authorization:
-              `Bearer ${session.accessToken}`,
-          },
-
+          headers,
           cache:
             "no-store",
         }
@@ -151,24 +180,58 @@ export async function canManageApplicationGuild(
       fetch(
         "https://discord.com/api/users/@me/guilds",
         {
-          headers: {
-            Authorization:
-              `Bearer ${session.accessToken}`,
-          },
-
+          headers,
           cache:
             "no-store",
         }
       ),
     ]);
 
+  /*
+   * Invalid/expired OAuth session.
+   * This is the ONLY case where
+   * the frontend should re-auth.
+   */
+  if (
+    userResponse.status ===
+      401 ||
+    guildResponse.status ===
+      401
+  ) {
+    permissionCache.delete(
+      cacheKey
+    );
+
+    return {
+      allowed: false,
+      authenticated: false,
+      identity: null,
+    };
+  }
+
+  /*
+   * Discord rate limit or temporary
+   * API failure should NOT force
+   * another OAuth login.
+   */
   if (
     !userResponse.ok ||
     !guildResponse.ok
   ) {
+    const previous =
+      permissionCache.get(
+        cacheKey
+      );
+
+    if (previous) {
+      return previous.result;
+    }
+
     return {
       allowed: false,
+      authenticated: true,
       identity: null,
+      temporaryFailure: true,
     };
   }
 
@@ -189,11 +252,38 @@ export async function canManageApplicationGuild(
         guildId
     );
 
-  if (!guild) {
-    return {
-      allowed: false,
-      identity: null,
+  const identity:
+    DiscordIdentity = {
+      id:
+        String(user.id),
+
+      username:
+        user.global_name ||
+        user.username ||
+        "Discord User",
+
+      avatar:
+        avatarUrl(user),
     };
+
+  if (!guild) {
+    const result = {
+      allowed: false,
+      authenticated: true,
+      identity,
+    };
+
+    permissionCache.set(
+      cacheKey,
+      {
+        result,
+        expiresAt:
+          Date.now() +
+          AUTH_CACHE_TTL,
+      }
+    );
+
+    return result;
   }
 
   const permissions =
@@ -202,7 +292,9 @@ export async function canManageApplicationGuild(
     );
 
   const allowed =
-    guild.owner ||
+    Boolean(
+      guild.owner
+    ) ||
     (
       permissions &
       ADMINISTRATOR
@@ -214,24 +306,21 @@ export async function canManageApplicationGuild(
     ) ===
       MANAGE_GUILD;
 
-  return {
+  const result = {
     allowed,
-
-    identity: {
-      id:
-        String(
-          user.id
-        ),
-
-      username:
-        user.global_name ||
-        user.username ||
-        "Discord User",
-
-      avatar:
-        user.avatar
-          ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=256`
-          : null,
-    },
+    authenticated: true,
+    identity,
   };
+
+  permissionCache.set(
+    cacheKey,
+    {
+      result,
+      expiresAt:
+        Date.now() +
+        AUTH_CACHE_TTL,
+    }
+  );
+
+  return result;
 }

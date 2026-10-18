@@ -50,6 +50,34 @@ export async function GET(
     );
 
   if (
+    !auth.authenticated
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Discord sign-in is required.",
+      },
+      {
+        status: 401,
+      }
+    );
+  }
+
+  if (
+    auth.temporaryFailure
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Discord is temporarily unavailable. Please try again.",
+      },
+      {
+        status: 503,
+      }
+    );
+  }
+
+  if (
     !auth.allowed
   ) {
     return NextResponse.json(
@@ -134,6 +162,34 @@ export async function POST(
     await canManageApplicationGuild(
       guildId
     );
+
+  if (
+    !auth.authenticated
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Discord sign-in is required.",
+      },
+      {
+        status: 401,
+      }
+    );
+  }
+
+  if (
+    auth.temporaryFailure
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Discord is temporarily unavailable. Please try again.",
+      },
+      {
+        status: 503,
+      }
+    );
+  }
 
   if (
     !auth.allowed ||
