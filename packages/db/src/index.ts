@@ -23,4 +23,8 @@ export {
   guildActions,
   warnings,
   moderationActions,
+  healthDailyMetrics,
+  healthHourlyActivity,
+  healthDailyActiveMembers,
+  healthMemberLifecycle,
 } from "./schema.js";

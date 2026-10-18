@@ -35,6 +35,12 @@ import {
 import { and, eq } from "drizzle-orm";
 
 import {
+  recordHealthMessage,
+  recordHealthJoin,
+  recordHealthLeave,
+} from "./healthAnalytics.js";
+
+import {
   data as pingData,
   execute as executePing,
 } from "./commands/ping.js";
@@ -2301,4 +2307,62 @@ client.on(
   }
 );
 
-await client.login(token);
+await 
+// ============================================================
+// UtilityX Server Health analytics
+// ============================================================
+
+client.on(Events.MessageCreate, async (message) => {
+  if (!message.guild) return;
+
+  // Ignore bots so bot traffic does not inflate
+  // community activity scores.
+  if (message.author.bot) return;
+
+  try {
+    await recordHealthMessage(
+      message.guild.id,
+      message.author.id
+    );
+  } catch (error) {
+    console.error(
+      "Server Health message tracking failed:",
+      error
+    );
+  }
+});
+
+client.on(Events.GuildMemberAdd, async (member) => {
+  if (member.user.bot) return;
+
+  try {
+    await recordHealthJoin(
+      member.guild.id,
+      member.id,
+      member.joinedAt ?? new Date()
+    );
+  } catch (error) {
+    console.error(
+      "Server Health join tracking failed:",
+      error
+    );
+  }
+});
+
+client.on(Events.GuildMemberRemove, async (member) => {
+  if (member.user.bot) return;
+
+  try {
+    await recordHealthLeave(
+      member.guild.id,
+      member.id
+    );
+  } catch (error) {
+    console.error(
+      "Server Health leave tracking failed:",
+      error
+    );
+  }
+});
+
+client.login(token);

@@ -3,6 +3,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -401,4 +402,168 @@ export const moderationActions = pgTable(
       .notNull()
       .defaultNow(),
   }
+);
+
+
+// ============================================================
+// UtilityX Server Health
+// ============================================================
+
+export const healthDailyMetrics = pgTable(
+  "health_daily_metrics",
+  {
+    guildId: text("guild_id").notNull(),
+
+    date: text("date").notNull(),
+
+    messages: integer("messages")
+      .notNull()
+      .default(0),
+
+    joins: integer("joins")
+      .notNull()
+      .default(0),
+
+    leaves: integer("leaves")
+      .notNull()
+      .default(0),
+
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp("updated_at", {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [
+        table.guildId,
+        table.date,
+      ],
+    }),
+  ]
+);
+
+export const healthHourlyActivity = pgTable(
+  "health_hourly_activity",
+  {
+    guildId: text("guild_id").notNull(),
+
+    hour: timestamp("hour", {
+      withTimezone: true,
+    }).notNull(),
+
+    messages: integer("messages")
+      .notNull()
+      .default(0),
+
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp("updated_at", {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [
+        table.guildId,
+        table.hour,
+      ],
+    }),
+  ]
+);
+
+export const healthDailyActiveMembers = pgTable(
+  "health_daily_active_members",
+  {
+    guildId: text("guild_id").notNull(),
+
+    date: text("date").notNull(),
+
+    userId: text("user_id").notNull(),
+
+    firstActivityAt: timestamp(
+      "first_activity_at",
+      { withTimezone: true }
+    )
+      .notNull()
+      .defaultNow(),
+
+    lastActivityAt: timestamp(
+      "last_activity_at",
+      { withTimezone: true }
+    )
+      .notNull()
+      .defaultNow(),
+
+    messageCount: integer("message_count")
+      .notNull()
+      .default(1),
+  },
+  (table) => [
+    primaryKey({
+      columns: [
+        table.guildId,
+        table.date,
+        table.userId,
+      ],
+    }),
+  ]
+);
+
+export const healthMemberLifecycle = pgTable(
+  "health_member_lifecycle",
+  {
+    guildId: text("guild_id").notNull(),
+
+    userId: text("user_id").notNull(),
+
+    joinedAt: timestamp("joined_at", {
+      withTimezone: true,
+    }),
+
+    leftAt: timestamp("left_at", {
+      withTimezone: true,
+    }),
+
+    firstMessageAt: timestamp(
+      "first_message_at",
+      { withTimezone: true }
+    ),
+
+    lastMessageAt: timestamp(
+      "last_message_at",
+      { withTimezone: true }
+    ),
+
+    messageCount: integer("message_count")
+      .notNull()
+      .default(0),
+
+    updatedAt: timestamp("updated_at", {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [
+        table.guildId,
+        table.userId,
+      ],
+    }),
+  ]
 );
