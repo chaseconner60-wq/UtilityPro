@@ -77,18 +77,9 @@ export async function fetchErlcSnapshot(
       DEFAULT_ERLC_API
     ).replace(/\/$/, "");
 
-  const params =
-    new URLSearchParams({
-      Players: "true",
-      Staff: "true",
-      Queue: "true",
-      Vehicles: "true",
-      EmergencyCalls: "true",
-    });
-
   const response =
     await fetch(
-      `${apiBase}/v2/server?${params.toString()}`,
+      `${apiBase}/v2/server`,
       {
         method: "GET",
 
@@ -98,15 +89,6 @@ export async function fetchErlcSnapshot(
 
           Accept:
             "application/json",
-
-          ...(process.env
-            .ERLC_GLOBAL_TOKEN
-            ? {
-                Authorization:
-                  process.env
-                    .ERLC_GLOBAL_TOKEN,
-              }
-            : {}),
         },
 
         signal:
