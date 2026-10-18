@@ -577,7 +577,14 @@ export default function ServerDashboard({
             )}
           </nav>
 
-          <div className="border-t border-white/[0.07] p-3">
+          <div className="space-y-2 border-t border-white/[0.07] p-3">
+            <a
+              href={`/dashboard/guilds/${guildId}/erlc`}
+              className="flex items-center justify-center gap-2 rounded-xl border border-sky-500/15 bg-sky-500/[0.06] px-4 py-2.5 text-xs font-semibold text-sky-300 transition hover:bg-sky-500/[0.12]"
+            >
+              ER:LC Control Center →
+            </a>
+
             <a
               href="/dashboard"
               className="flex items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-2.5 text-xs font-medium text-zinc-400 transition hover:bg-white/[0.055] hover:text-white"
@@ -590,6 +597,12 @@ export default function ServerDashboard({
         <div className="min-w-0 flex-1">
           <div className="border-b border-white/[0.07] bg-[#090a0e]/80 px-4 py-3 backdrop-blur-xl lg:hidden">
             <div className="flex gap-2 overflow-x-auto pb-1">
+              <a
+                href={`/dashboard/guilds/${guildId}/erlc`}
+                className="shrink-0 rounded-lg border border-sky-500/15 bg-sky-500/[0.07] px-3 py-2 text-xs font-semibold text-sky-300"
+              >
+                ER:LC →
+              </a>
               {navigationGroups
                 .flatMap(
                   (group) =>
