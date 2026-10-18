@@ -678,6 +678,42 @@ export default function ServerDashboard({
                   for {guildName}.
                 </p>
 
+                <div className="mt-8 rounded-3xl border border-white/[0.07] bg-gradient-to-br from-sky-500/[0.08] via-white/[0.02] to-indigo-500/[0.05] p-6">
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-400">
+                        UtilityX Portal
+                      </p>
+
+                      <h3 className="mt-2 text-xl font-bold">
+                        Applications
+                      </h3>
+
+                      <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                        Create application forms, review applicants, and manage your server's application pipeline from a dedicated portal.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                      <a
+                        href={`/applications/${guildId}`}
+                        className="rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400"
+                      >
+                        Manage Applications
+                      </a>
+
+                      <a
+                        href={`/apply/${guildId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-zinc-300 transition hover:bg-white/[0.07]"
+                      >
+                        View Public Portal
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="mt-8 grid gap-4 md:grid-cols-3">
                   <InfoCard
                     title="UtilityX"
