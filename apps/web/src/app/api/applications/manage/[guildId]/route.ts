@@ -121,16 +121,30 @@ export async function GET(
       "submissionId"
     );
 
+  const advancedSubmissionId =
+    url.searchParams.get(
+      "advancedSubmissionId"
+    );
+
+  const workflowFormId =
+    url.searchParams.get(
+      "workflowFormId"
+    );
+
   const target =
     resources
       ? `${apiUrl}/internal/guild-resources/${guildId}`
-      : submissionId
-        ? `${apiUrl}/internal/applications/${guildId}/submissions/${encodeURIComponent(submissionId)}`
-        : advancedFormId
-          ? `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(advancedFormId)}/advanced`
-          : formId
-            ? `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(formId)}`
-            : `${apiUrl}/internal/applications/${guildId}`;
+      : advancedSubmissionId
+        ? `${apiUrl}/internal/applications/${guildId}/submissions/${encodeURIComponent(advancedSubmissionId)}/advanced`
+        : submissionId
+          ? `${apiUrl}/internal/applications/${guildId}/submissions/${encodeURIComponent(submissionId)}`
+          : workflowFormId
+            ? `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(workflowFormId)}/workflow`
+            : advancedFormId
+              ? `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(advancedFormId)}/advanced`
+              : formId
+                ? `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(formId)}`
+                : `${apiUrl}/internal/applications/${guildId}`;
 
   const response =
     await fetch(
@@ -386,6 +400,251 @@ export async function POST(
     };
   } else if (
     action ===
+    "section-create"
+  ) {
+    if (!body.formId) {
+      return NextResponse.json(
+        {
+          error:
+            "formId is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(body.formId)}/sections`;
+
+    method =
+      "POST";
+
+    payload = {
+      title:
+        body.title,
+
+      description:
+        body.description ??
+        null,
+    };
+  } else if (
+    action ===
+    "section-save"
+  ) {
+    if (
+      !body.formId ||
+      !body.sectionId
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "formId and sectionId are required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(body.formId)}/sections/${encodeURIComponent(body.sectionId)}`;
+
+    method =
+      "PATCH";
+
+    payload =
+      body.section ??
+      {};
+  } else if (
+    action ===
+    "section-delete"
+  ) {
+    if (
+      !body.formId ||
+      !body.sectionId
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "formId and sectionId are required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(body.formId)}/sections/${encodeURIComponent(body.sectionId)}`;
+
+    method =
+      "DELETE";
+  } else if (
+    action ===
+    "sections-reorder"
+  ) {
+    if (!body.formId) {
+      return NextResponse.json(
+        {
+          error:
+            "formId is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(body.formId)}/sections/reorder`;
+
+    method =
+      "PUT";
+
+    payload = {
+      sectionIds:
+        body.sectionIds ??
+        [],
+    };
+  } else if (
+    action ===
+    "question-settings-save"
+  ) {
+    if (
+      !body.formId ||
+      !body.questionId
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "formId and questionId are required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(body.formId)}/questions/${encodeURIComponent(body.questionId)}/settings`;
+
+    method =
+      "PUT";
+
+    payload =
+      body.settings ??
+      {};
+  } else if (
+    action ===
+    "workflow-stage-create"
+  ) {
+    if (!body.formId) {
+      return NextResponse.json(
+        {
+          error:
+            "formId is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(body.formId)}/workflow`;
+
+    payload = {
+      name:
+        body.name,
+
+      stageType:
+        body.stageType,
+
+      terminal:
+        body.terminal,
+    };
+  } else if (
+    action ===
+    "workflow-stage-save"
+  ) {
+    if (
+      !body.formId ||
+      !body.stageId
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "formId and stageId are required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(body.formId)}/workflow/${encodeURIComponent(body.stageId)}`;
+
+    method =
+      "PATCH";
+
+    payload =
+      body.stage ??
+      {};
+  } else if (
+    action ===
+    "workflow-stage-delete"
+  ) {
+    if (
+      !body.formId ||
+      !body.stageId
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "formId and stageId are required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(body.formId)}/workflow/${encodeURIComponent(body.stageId)}`;
+
+    method =
+      "DELETE";
+  } else if (
+    action ===
+    "workflow-reorder"
+  ) {
+    if (!body.formId) {
+      return NextResponse.json(
+        {
+          error:
+            "formId is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    target =
+      `${apiUrl}/internal/applications/${guildId}/forms/${encodeURIComponent(body.formId)}/workflow/reorder`;
+
+    method =
+      "PUT";
+
+    payload = {
+      stageIds:
+        body.stageIds ??
+        [],
+    };
+  } else if (
+    action ===
     "submission-review"
   ) {
     if (
@@ -408,6 +667,9 @@ export async function POST(
     payload = {
       status:
         body.status,
+
+      workflowStageId:
+        body.workflowStageId,
 
       note:
         body.note ??

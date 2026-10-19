@@ -1,0 +1,1 @@
+ALTER TABLE "application_submissions" ADD COLUMN "workflow_stage_id" text;

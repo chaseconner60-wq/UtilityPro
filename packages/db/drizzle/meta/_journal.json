@@ -148,6 +148,27 @@
       "when": 1792364441529,
       "tag": "0020_thick_amphibian",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792366119969,
+      "tag": "0021_concerned_sway",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792367363187,
+      "tag": "0022_bent_tyger_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792374410554,
+      "tag": "0023_stiff_groot",
+      "breakpoints": true
     }
   ]
 }

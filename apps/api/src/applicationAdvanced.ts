@@ -18,6 +18,8 @@ import {
   applicationAuditLogs,
   applicationCustomStatuses,
   applicationForms,
+  applicationFormSections,
+  applicationWorkflowStages,
   applicationInterviews,
   applicationPortalSlugs,
   applicationQuestions,
@@ -2693,4 +2695,786 @@ export async function resolveApplicationPortalSlug(
 
   return result ??
     null;
+}
+
+
+export async function listApplicationFormSections(
+  guildId: string,
+  formId: string
+) {
+  return db
+    .select()
+    .from(applicationFormSections)
+    .where(
+      and(
+        eq(applicationFormSections.guildId, guildId),
+        eq(applicationFormSections.formId, formId)
+      )
+    )
+    .orderBy(
+      asc(applicationFormSections.position)
+    );
+}
+
+export async function createApplicationFormSection(
+  guildId: string,
+  formId: string,
+  input: {
+    title?: string;
+    description?: string | null;
+  }
+) {
+  const title =
+    cleanText(
+      input.title,
+      120
+    );
+
+  if (!title) {
+    throw new Error(
+      "Section title is required."
+    );
+  }
+
+  const existing =
+    await listApplicationFormSections(
+      guildId,
+      formId
+    );
+
+  const [section] =
+    await db
+      .insert(
+        applicationFormSections
+      )
+      .values({
+        id:
+          randomUUID(),
+
+        guildId,
+        formId,
+
+        title,
+
+        description:
+          cleanText(
+            input.description,
+            500
+          ),
+
+        position:
+          existing.length,
+      })
+      .returning();
+
+  return section;
+}
+
+export async function updateApplicationFormSection(
+  guildId: string,
+  formId: string,
+  sectionId: string,
+  input: {
+    title?: string;
+    description?: string | null;
+    position?: number;
+  }
+) {
+  const [existing] =
+    await db
+      .select()
+      .from(
+        applicationFormSections
+      )
+      .where(
+        and(
+          eq(
+            applicationFormSections.guildId,
+            guildId
+          ),
+          eq(
+            applicationFormSections.formId,
+            formId
+          ),
+          eq(
+            applicationFormSections.id,
+            sectionId
+          )
+        )
+      )
+      .limit(1);
+
+  if (!existing) {
+    throw new Error(
+      "Section not found."
+    );
+  }
+
+  const cleanedTitle =
+    input.title === undefined
+      ? undefined
+      : cleanText(
+          input.title,
+          120
+        );
+
+  if (
+    input.title !== undefined &&
+    !cleanedTitle
+  ) {
+    throw new Error(
+      "Section title is required."
+    );
+  }
+
+  const title =
+    cleanedTitle ??
+    undefined;
+
+  const [updated] =
+    await db
+      .update(
+        applicationFormSections
+      )
+      .set({
+        title,
+
+        description:
+          input.description ===
+          undefined
+            ? undefined
+            : cleanText(
+                input.description,
+                500
+              ),
+
+        position:
+          input.position ===
+          undefined
+            ? undefined
+            : clamp(
+                input.position,
+                0,
+                500,
+                existing.position
+              ),
+
+        updatedAt:
+          new Date(),
+      })
+      .where(
+        eq(
+          applicationFormSections.id,
+          sectionId
+        )
+      )
+      .returning();
+
+  return updated;
+}
+
+export async function deleteApplicationFormSection(
+  guildId: string,
+  formId: string,
+  sectionId: string
+) {
+  const [existing] =
+    await db
+      .select()
+      .from(
+        applicationFormSections
+      )
+      .where(
+        and(
+          eq(
+            applicationFormSections.guildId,
+            guildId
+          ),
+          eq(
+            applicationFormSections.formId,
+            formId
+          ),
+          eq(
+            applicationFormSections.id,
+            sectionId
+          )
+        )
+      )
+      .limit(1);
+
+  if (!existing) {
+    throw new Error(
+      "Section not found."
+    );
+  }
+
+  await db
+    .update(
+      applicationQuestions
+    )
+    .set({
+      sectionId:
+        null,
+    })
+    .where(
+      and(
+        eq(
+          applicationQuestions.guildId,
+          guildId
+        ),
+        eq(
+          applicationQuestions.formId,
+          formId
+        ),
+        eq(
+          applicationQuestions.sectionId,
+          sectionId
+        )
+      )
+    );
+
+  const [section] =
+    await db
+      .delete(
+        applicationFormSections
+      )
+      .where(
+        eq(
+          applicationFormSections.id,
+          sectionId
+        )
+      )
+      .returning();
+
+  return {
+    deleted:
+      true,
+
+    sectionId,
+  };
+}
+
+export async function reorderApplicationFormSections(
+  guildId: string,
+  formId: string,
+  sectionIds: string[]
+) {
+  for (
+    let index = 0;
+    index <
+    sectionIds.length;
+    index++
+  ) {
+    await db
+      .update(
+        applicationFormSections
+      )
+      .set({
+        position:
+          index,
+
+        updatedAt:
+          new Date(),
+      })
+      .where(
+        and(
+          eq(
+            applicationFormSections.guildId,
+            guildId
+          ),
+          eq(
+            applicationFormSections.formId,
+            formId
+          ),
+          eq(
+            applicationFormSections.id,
+            sectionIds[index]
+          )
+        )
+      );
+  }
+
+  return listApplicationFormSections(
+    guildId,
+    formId
+  );
+}
+
+
+const VALID_WORKFLOW_STAGE_TYPES =
+  new Set([
+    "submitted",
+    "review",
+    "interview",
+    "decision",
+    "custom",
+  ]);
+
+function workflowStageSlug(
+  value: string
+) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(
+      /[^a-z0-9]+/g,
+      "-"
+    )
+    .replace(
+      /^-+|-+$/g,
+      ""
+    )
+    .slice(
+      0,
+      80
+    );
+}
+
+async function assertWorkflowForm(
+  guildId: string,
+  formId: string
+) {
+  const [form] =
+    await db
+      .select({
+        id:
+          applicationForms.id,
+      })
+      .from(
+        applicationForms
+      )
+      .where(
+        and(
+          eq(
+            applicationForms.guildId,
+            guildId
+          ),
+          eq(
+            applicationForms.id,
+            formId
+          )
+        )
+      )
+      .limit(1);
+
+  if (!form) {
+    throw new Error(
+      "Application form not found."
+    );
+  }
+
+  return form;
+}
+
+export async function listApplicationWorkflowStages(
+  guildId: string,
+  formId: string
+) {
+  await assertWorkflowForm(
+    guildId,
+    formId
+  );
+
+  return db
+    .select()
+    .from(
+      applicationWorkflowStages
+    )
+    .where(
+      and(
+        eq(
+          applicationWorkflowStages.guildId,
+          guildId
+        ),
+        eq(
+          applicationWorkflowStages.formId,
+          formId
+        )
+      )
+    )
+    .orderBy(
+      asc(
+        applicationWorkflowStages.position
+      ),
+      asc(
+        applicationWorkflowStages.createdAt
+      )
+    );
+}
+
+export async function createApplicationWorkflowStage(
+  guildId: string,
+  formId: string,
+  input: {
+    name?: string;
+    stageType?: string;
+    terminal?: boolean;
+  }
+) {
+  await assertWorkflowForm(
+    guildId,
+    formId
+  );
+
+  const name =
+    cleanText(
+      input.name,
+      100
+    );
+
+  if (!name) {
+    throw new Error(
+      "Workflow stage name is required."
+    );
+  }
+
+  const stageType =
+    cleanText(
+      input.stageType,
+      30
+    ) ??
+    "review";
+
+  if (
+    !VALID_WORKFLOW_STAGE_TYPES.has(
+      stageType
+    )
+  ) {
+    throw new Error(
+      "Invalid workflow stage type."
+    );
+  }
+
+  const existing =
+    await listApplicationWorkflowStages(
+      guildId,
+      formId
+    );
+
+  const baseSlug =
+    workflowStageSlug(
+      name
+    ) ||
+    "stage";
+
+  const usedSlugs =
+    new Set(
+      existing.map(
+        (stage) =>
+          stage.slug
+      )
+    );
+
+  let slug =
+    baseSlug;
+
+  let suffix =
+    2;
+
+  while (
+    usedSlugs.has(
+      slug
+    )
+  ) {
+    slug =
+      `${baseSlug}-${suffix}`;
+
+    suffix +=
+      1;
+  }
+
+  const [stage] =
+    await db
+      .insert(
+        applicationWorkflowStages
+      )
+      .values({
+        id:
+          randomUUID(),
+
+        guildId,
+        formId,
+
+        name,
+        slug,
+
+        position:
+          existing.length,
+
+        stageType,
+
+        terminal:
+          input.terminal ??
+          false,
+
+        updatedAt:
+          new Date(),
+      })
+      .returning();
+
+  return stage;
+}
+
+export async function updateApplicationWorkflowStage(
+  guildId: string,
+  formId: string,
+  stageId: string,
+  input: {
+    name?: string;
+    stageType?: string;
+    terminal?: boolean;
+  }
+) {
+  await assertWorkflowForm(
+    guildId,
+    formId
+  );
+
+  const [existing] =
+    await db
+      .select()
+      .from(
+        applicationWorkflowStages
+      )
+      .where(
+        and(
+          eq(
+            applicationWorkflowStages.guildId,
+            guildId
+          ),
+          eq(
+            applicationWorkflowStages.formId,
+            formId
+          ),
+          eq(
+            applicationWorkflowStages.id,
+            stageId
+          )
+        )
+      )
+      .limit(1);
+
+  if (!existing) {
+    throw new Error(
+      "Workflow stage not found."
+    );
+  }
+
+  const nextName =
+    input.name ===
+      undefined
+      ? undefined
+      : cleanText(
+          input.name,
+          100
+        );
+
+  if (
+    input.name !==
+      undefined &&
+    !nextName
+  ) {
+    throw new Error(
+      "Workflow stage name is required."
+    );
+  }
+
+  const nextStageType =
+    input.stageType ===
+      undefined
+      ? undefined
+      : cleanText(
+          input.stageType,
+          30
+        );
+
+  if (
+    nextStageType &&
+    !VALID_WORKFLOW_STAGE_TYPES.has(
+      nextStageType
+    )
+  ) {
+    throw new Error(
+      "Invalid workflow stage type."
+    );
+  }
+
+  const [stage] =
+    await db
+      .update(
+        applicationWorkflowStages
+      )
+      .set({
+        name:
+          nextName ??
+          undefined,
+
+        stageType:
+          nextStageType ??
+          undefined,
+
+        terminal:
+          input.terminal ===
+            undefined
+            ? undefined
+            : Boolean(
+                input.terminal
+              ),
+
+        updatedAt:
+          new Date(),
+      })
+      .where(
+        and(
+          eq(
+            applicationWorkflowStages.guildId,
+            guildId
+          ),
+          eq(
+            applicationWorkflowStages.formId,
+            formId
+          ),
+          eq(
+            applicationWorkflowStages.id,
+            stageId
+          )
+        )
+      )
+      .returning();
+
+  return stage;
+}
+
+export async function deleteApplicationWorkflowStage(
+  guildId: string,
+  formId: string,
+  stageId: string
+) {
+  await assertWorkflowForm(
+    guildId,
+    formId
+  );
+
+  const [stage] =
+    await db
+      .delete(
+        applicationWorkflowStages
+      )
+      .where(
+        and(
+          eq(
+            applicationWorkflowStages.guildId,
+            guildId
+          ),
+          eq(
+            applicationWorkflowStages.formId,
+            formId
+          ),
+          eq(
+            applicationWorkflowStages.id,
+            stageId
+          )
+        )
+      )
+      .returning();
+
+  if (!stage) {
+    throw new Error(
+      "Workflow stage not found."
+    );
+  }
+
+  return {
+    deleted: true,
+    stageId,
+  };
+}
+
+export async function reorderApplicationWorkflowStages(
+  guildId: string,
+  formId: string,
+  stageIds: string[]
+) {
+  await assertWorkflowForm(
+    guildId,
+    formId
+  );
+
+  const existing =
+    await listApplicationWorkflowStages(
+      guildId,
+      formId
+    );
+
+  const existingIds =
+    new Set(
+      existing.map(
+        (stage) =>
+          stage.id
+      )
+    );
+
+  const uniqueIds =
+    new Set(
+      stageIds
+    );
+
+  if (
+    stageIds.length !==
+      existing.length ||
+    uniqueIds.size !==
+      stageIds.length ||
+    stageIds.some(
+      (id) =>
+        !existingIds.has(
+          id
+        )
+    )
+  ) {
+    throw new Error(
+      "Workflow stage order is invalid."
+    );
+  }
+
+  for (
+    let position =
+      0;
+    position <
+      stageIds.length;
+    position +=
+      1
+  ) {
+    await db
+      .update(
+        applicationWorkflowStages
+      )
+      .set({
+        position,
+        updatedAt:
+          new Date(),
+      })
+      .where(
+        and(
+          eq(
+            applicationWorkflowStages.guildId,
+            guildId
+          ),
+          eq(
+            applicationWorkflowStages.formId,
+            formId
+          ),
+          eq(
+            applicationWorkflowStages.id,
+            stageIds[
+              position
+            ]
+          )
+        )
+      );
+  }
+
+  return listApplicationWorkflowStages(
+    guildId,
+    formId
+  );
 }

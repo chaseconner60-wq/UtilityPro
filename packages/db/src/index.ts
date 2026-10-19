@@ -55,4 +55,11 @@ export {
   applicationTemplates,
   applicationAppeals,
   applicationPortalSlugs,
+  applicationFormSections,
+  applicationWorkflowStages,
+  applicationAutomationRules,
+  applicationPermissionGroups,
+  applicationNotificationRules,
+  applicationApplicantNotes,
+  applicationFormBranding,
 } from "./schema.js";

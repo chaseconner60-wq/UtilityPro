@@ -456,6 +456,7 @@ export function registerApplicationRoutes(
     Body: {
       questions?: Array<{
         id?: string;
+        sectionId?: string | null;
         label?: string;
         description?: string | null;
         type?:
@@ -590,6 +591,7 @@ export function registerApplicationRoutes(
 
     Body: {
       status?: string;
+      workflowStageId?: string | null;
       reviewerUserId?: string;
       reviewerUsername?: string;
       note?: string | null;

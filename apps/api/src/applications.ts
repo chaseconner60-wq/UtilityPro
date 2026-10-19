@@ -18,6 +18,8 @@ import {
   db,
   applicationPortals,
   applicationForms,
+  applicationFormSections,
+  applicationWorkflowStages,
   applicationQuestions,
   applicationSubmissions,
   applicationAnswers,
@@ -45,6 +47,7 @@ type CreateFormInput = {
 
 type QuestionInput = {
   id?: string;
+  sectionId?: string | null;
   label?: string;
   description?: string | null;
   type?: ApplicationQuestionType;
@@ -70,6 +73,7 @@ type SubmitInput = {
 
 type ReviewInput = {
   status?: string;
+  workflowStageId?: string | null;
   reviewerUserId?: string;
   reviewerUsername?: string;
   note?: string | null;
@@ -450,9 +454,37 @@ export async function getApplicationForm(
         )
       );
 
+  const sections =
+    await db
+      .select()
+      .from(
+        applicationFormSections
+      )
+      .where(
+        and(
+          eq(
+            applicationFormSections.guildId,
+            guildId
+          ),
+          eq(
+            applicationFormSections.formId,
+            formId
+          )
+        )
+      )
+      .orderBy(
+        asc(
+          applicationFormSections.position
+        ),
+        asc(
+          applicationFormSections.createdAt
+        )
+      );
+
   return {
     form,
     questions,
+    sections,
   };
 }
 
@@ -768,6 +800,58 @@ export async function replaceApplicationQuestions(
     );
   }
 
+  const sections =
+    await db
+      .select({
+        id:
+          applicationFormSections.id,
+      })
+      .from(
+        applicationFormSections
+      )
+      .where(
+        and(
+          eq(
+            applicationFormSections.guildId,
+            guildId
+          ),
+          eq(
+            applicationFormSections.formId,
+            formId
+          )
+        )
+      );
+
+  const validSectionIds =
+    new Set(
+      sections.map(
+        (section) =>
+          section.id
+      )
+    );
+
+  for (
+    const question
+    of questions
+  ) {
+    const sectionId =
+      cleanText(
+        question.sectionId,
+        100
+      );
+
+    if (
+      sectionId &&
+      !validSectionIds.has(
+        sectionId
+      )
+    ) {
+      throw new Error(
+        "Question references an invalid section."
+      );
+    }
+  }
+
   const normalized =
     questions.map(
       (
@@ -880,6 +964,81 @@ export async function replaceApplicationQuestions(
   }
 
   return normalized;
+}
+
+function workflowStageLegacyStatus(
+  stage: {
+    name: string;
+    slug: string;
+    stageType: string;
+    terminal: boolean;
+  }
+) {
+  const identity =
+    `${stage.slug} ${stage.name}`
+      .toLowerCase();
+
+  if (
+    identity.includes(
+      "accept"
+    )
+  ) {
+    return "accepted";
+  }
+
+  if (
+    identity.includes(
+      "deny"
+    ) ||
+    identity.includes(
+      "denied"
+    ) ||
+    identity.includes(
+      "reject"
+    )
+  ) {
+    return "denied";
+  }
+
+  if (
+    stage.stageType ===
+    "interview"
+  ) {
+    return "interview";
+  }
+
+  return "pending";
+}
+
+async function getWorkflowStagesForForm(
+  guildId: string,
+  formId: string
+) {
+  return db
+    .select()
+    .from(
+      applicationWorkflowStages
+    )
+    .where(
+      and(
+        eq(
+          applicationWorkflowStages.guildId,
+          guildId
+        ),
+        eq(
+          applicationWorkflowStages.formId,
+          formId
+        )
+      )
+    )
+    .orderBy(
+      asc(
+        applicationWorkflowStages.position
+      ),
+      asc(
+        applicationWorkflowStages.createdAt
+      )
+    );
 }
 
 function answerPresent(
@@ -1393,11 +1552,70 @@ export async function reviewApplicationSubmission(
       submissionId
     );
 
-  const status =
+  const requestedStatus =
     cleanText(
       input.status,
       30
     );
+
+  const requestedStageId =
+    cleanText(
+      input.workflowStageId,
+      100
+    );
+
+  let workflowStage:
+    | typeof applicationWorkflowStages.$inferSelect
+    | null =
+      null;
+
+  if (requestedStageId) {
+    const [stage] =
+      await db
+        .select()
+        .from(
+          applicationWorkflowStages
+        )
+        .where(
+          and(
+            eq(
+              applicationWorkflowStages.guildId,
+              guildId
+            ),
+            eq(
+              applicationWorkflowStages.formId,
+              current.submission.formId
+            ),
+            eq(
+              applicationWorkflowStages.id,
+              requestedStageId
+            )
+          )
+        )
+        .limit(1);
+
+    if (!stage) {
+      throw new Error(
+        "Workflow stage not found."
+      );
+    }
+
+    workflowStage =
+      stage;
+  }
+
+  let status =
+    requestedStatus;
+
+  if (
+    !status &&
+    workflowStage
+  ) {
+    status =
+      workflowStageLegacyStatus(
+        workflowStage
+      );
+  }
 
   if (
     !status ||
@@ -1408,6 +1626,47 @@ export async function reviewApplicationSubmission(
     throw new Error(
       "Invalid application status."
     );
+  }
+
+  // Keep legacy bot actions synchronized with
+  // matching workflow stages when possible.
+  if (
+    !workflowStage &&
+    requestedStatus
+  ) {
+    const stages =
+      await getWorkflowStagesForForm(
+        guildId,
+        current.submission.formId
+      );
+
+    if (
+      requestedStatus ===
+      "interview"
+    ) {
+      workflowStage =
+        stages.find(
+          (stage) =>
+            stage.stageType ===
+            "interview"
+        ) ??
+        null;
+    } else if (
+      requestedStatus ===
+        "accepted" ||
+      requestedStatus ===
+        "denied"
+    ) {
+      workflowStage =
+        stages.find(
+          (stage) =>
+            workflowStageLegacyStatus(
+              stage
+            ) ===
+            requestedStatus
+        ) ??
+        null;
+    }
   }
 
   const reviewerUserId =
@@ -1448,6 +1707,11 @@ export async function reviewApplicationSubmission(
       .set({
         status,
 
+        workflowStageId:
+          workflowStage
+            ? workflowStage.id
+            : undefined,
+
         reviewerUserId,
         reviewerUsername,
 
@@ -1487,15 +1751,20 @@ export async function reviewApplicationSubmission(
       note,
     });
 
-  await recordApplicationStatusChange(
-    guildId,
-    submissionId,
-    current.submission.status,
-    status,
-    reviewerUserId,
-    reviewerUsername,
-    note
-  );
+  if (
+    current.submission.status !==
+    status
+  ) {
+    await recordApplicationStatusChange(
+      guildId,
+      submissionId,
+      current.submission.status,
+      status,
+      reviewerUserId,
+      reviewerUsername,
+      note
+    );
+  }
 
   return submission;
 }

@@ -14,6 +14,16 @@ import {
   getApplicationAnalytics,
   getQuestionSettings,
   listApplicationInterviews,
+  listApplicationFormSections,
+  createApplicationFormSection,
+  updateApplicationFormSection,
+  deleteApplicationFormSection,
+  reorderApplicationFormSections,
+  listApplicationWorkflowStages,
+  createApplicationWorkflowStage,
+  updateApplicationWorkflowStage,
+  deleteApplicationWorkflowStage,
+  reorderApplicationWorkflowStages,
   listApplicationTemplates,
   listCustomApplicationStatuses,
   removeApplicationAssignment,
@@ -152,6 +162,475 @@ export function registerApplicationAdvancedRoutes(
               error instanceof Error
                 ? error.message
                 : "Unable to save advanced settings.",
+          });
+      }
+    }
+  );
+
+  app.get<{
+    Params: {
+      guildId: string;
+      formId: string;
+    };
+  }>(
+    "/internal/applications/:guildId/forms/:formId/workflow",
+    async (
+      request,
+      reply
+    ) => {
+      if (
+        !authorized(
+          request
+        )
+      ) {
+        return reply
+          .code(401)
+          .send({
+            error:
+              "Unauthorized.",
+          });
+      }
+
+      try {
+        return {
+          stages:
+            await listApplicationWorkflowStages(
+              request.params.guildId,
+              request.params.formId
+            ),
+        };
+      } catch (error) {
+        return reply
+          .code(400)
+          .send({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to load workflow.",
+          });
+      }
+    }
+  );
+
+  app.post<{
+    Params: {
+      guildId: string;
+      formId: string;
+    };
+
+    Body: {
+      name?: string;
+      stageType?: string;
+      terminal?: boolean;
+    };
+  }>(
+    "/internal/applications/:guildId/forms/:formId/workflow",
+    async (
+      request,
+      reply
+    ) => {
+      if (
+        !authorized(
+          request
+        )
+      ) {
+        return reply
+          .code(401)
+          .send({
+            error:
+              "Unauthorized.",
+          });
+      }
+
+      try {
+        return {
+          stage:
+            await createApplicationWorkflowStage(
+              request.params.guildId,
+              request.params.formId,
+              request.body ??
+                {}
+            ),
+        };
+      } catch (error) {
+        return reply
+          .code(400)
+          .send({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to create workflow stage.",
+          });
+      }
+    }
+  );
+
+  app.patch<{
+    Params: {
+      guildId: string;
+      formId: string;
+      stageId: string;
+    };
+
+    Body: {
+      name?: string;
+      stageType?: string;
+      terminal?: boolean;
+    };
+  }>(
+    "/internal/applications/:guildId/forms/:formId/workflow/:stageId",
+    async (
+      request,
+      reply
+    ) => {
+      if (
+        !authorized(
+          request
+        )
+      ) {
+        return reply
+          .code(401)
+          .send({
+            error:
+              "Unauthorized.",
+          });
+      }
+
+      try {
+        return {
+          stage:
+            await updateApplicationWorkflowStage(
+              request.params.guildId,
+              request.params.formId,
+              request.params.stageId,
+              request.body ??
+                {}
+            ),
+        };
+      } catch (error) {
+        return reply
+          .code(400)
+          .send({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to update workflow stage.",
+          });
+      }
+    }
+  );
+
+  app.delete<{
+    Params: {
+      guildId: string;
+      formId: string;
+      stageId: string;
+    };
+  }>(
+    "/internal/applications/:guildId/forms/:formId/workflow/:stageId",
+    async (
+      request,
+      reply
+    ) => {
+      if (
+        !authorized(
+          request
+        )
+      ) {
+        return reply
+          .code(401)
+          .send({
+            error:
+              "Unauthorized.",
+          });
+      }
+
+      try {
+        return await deleteApplicationWorkflowStage(
+          request.params.guildId,
+          request.params.formId,
+          request.params.stageId
+        );
+      } catch (error) {
+        return reply
+          .code(400)
+          .send({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to delete workflow stage.",
+          });
+      }
+    }
+  );
+
+  app.put<{
+    Params: {
+      guildId: string;
+      formId: string;
+    };
+
+    Body: {
+      stageIds?: string[];
+    };
+  }>(
+    "/internal/applications/:guildId/forms/:formId/workflow/reorder",
+    async (
+      request,
+      reply
+    ) => {
+      if (
+        !authorized(
+          request
+        )
+      ) {
+        return reply
+          .code(401)
+          .send({
+            error:
+              "Unauthorized.",
+          });
+      }
+
+      try {
+        return {
+          stages:
+            await reorderApplicationWorkflowStages(
+              request.params.guildId,
+              request.params.formId,
+              Array.isArray(
+                request.body
+                  ?.stageIds
+              )
+                ? request.body
+                    .stageIds
+                : []
+            ),
+        };
+      } catch (error) {
+        return reply
+          .code(400)
+          .send({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to reorder workflow.",
+          });
+      }
+    }
+  );
+
+  app.get<{
+    Params: {
+      guildId: string;
+      formId: string;
+    };
+  }>(
+    "/internal/applications/:guildId/forms/:formId/sections",
+    async (
+      request,
+      reply
+    ) => {
+      if (
+        !guard(
+          request,
+          reply
+        )
+      ) {
+        return;
+      }
+
+      return {
+        sections:
+          await listApplicationFormSections(
+            request.params.guildId,
+            request.params.formId
+          ),
+      };
+    }
+  );
+
+  app.post<{
+    Params: {
+      guildId: string;
+      formId: string;
+    };
+
+    Body: any;
+  }>(
+    "/internal/applications/:guildId/forms/:formId/sections",
+    async (
+      request,
+      reply
+    ) => {
+      if (
+        !guard(
+          request,
+          reply
+        )
+      ) {
+        return;
+      }
+
+      try {
+        return {
+          section:
+            await createApplicationFormSection(
+              request.params.guildId,
+              request.params.formId,
+              request.body ?? {}
+            ),
+        };
+      } catch (
+        error
+      ) {
+        return reply
+          .code(400)
+          .send({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to create section.",
+          });
+      }
+    }
+  );
+
+  app.patch<{
+    Params: {
+      guildId: string;
+      formId: string;
+      sectionId: string;
+    };
+
+    Body: any;
+  }>(
+    "/internal/applications/:guildId/forms/:formId/sections/:sectionId",
+    async (
+      request,
+      reply
+    ) => {
+      if (
+        !guard(
+          request,
+          reply
+        )
+      ) {
+        return;
+      }
+
+      try {
+        return {
+          section:
+            await updateApplicationFormSection(
+              request.params.guildId,
+              request.params.formId,
+              request.params.sectionId,
+              request.body ?? {}
+            ),
+        };
+      } catch (
+        error
+      ) {
+        return reply
+          .code(400)
+          .send({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to update section.",
+          });
+      }
+    }
+  );
+
+  app.delete<{
+    Params: {
+      guildId: string;
+      formId: string;
+      sectionId: string;
+    };
+  }>(
+    "/internal/applications/:guildId/forms/:formId/sections/:sectionId",
+    async (
+      request,
+      reply
+    ) => {
+      if (
+        !guard(
+          request,
+          reply
+        )
+      ) {
+        return;
+      }
+
+      try {
+        return await deleteApplicationFormSection(
+          request.params.guildId,
+          request.params.formId,
+          request.params.sectionId
+        );
+      } catch (
+        error
+      ) {
+        return reply
+          .code(400)
+          .send({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to delete section.",
+          });
+      }
+    }
+  );
+
+  app.put<{
+    Params: {
+      guildId: string;
+      formId: string;
+    };
+
+    Body: {
+      sectionIds?: string[];
+    };
+  }>(
+    "/internal/applications/:guildId/forms/:formId/sections/reorder",
+    async (
+      request,
+      reply
+    ) => {
+      if (
+        !guard(
+          request,
+          reply
+        )
+      ) {
+        return;
+      }
+
+      try {
+        return {
+          sections:
+            await reorderApplicationFormSections(
+              request.params.guildId,
+              request.params.formId,
+              request.body
+                ?.sectionIds ??
+                []
+            ),
+        };
+      } catch (
+        error
+      ) {
+        return reply
+          .code(400)
+          .send({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to reorder sections.",
           });
       }
     }

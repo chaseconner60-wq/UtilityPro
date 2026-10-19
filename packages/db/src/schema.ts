@@ -1305,6 +1305,10 @@ export const applicationQuestions = pgTable(
       "guild_id"
     ).notNull(),
 
+    sectionId: text(
+      "section_id"
+    ),
+
     label: text(
       "label"
     ).notNull(),
@@ -1363,6 +1367,10 @@ export const applicationSubmissions = pgTable(
     formId: text(
       "form_id"
     ).notNull(),
+
+    workflowStageId: text(
+      "workflow_stage_id"
+    ),
 
     applicantUserId: text(
       "applicant_user_id"
@@ -2171,6 +2179,262 @@ export const applicationPortalSlugs = pgTable(
       {
         withTimezone: true,
       }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationFormSections = pgTable(
+  "application_form_sections",
+  {
+    id: text("id").primaryKey(),
+    guildId: text("guild_id").notNull(),
+    formId: text("form_id").notNull(),
+
+    title: text("title").notNull(),
+    description: text("description"),
+
+    position: integer("position")
+      .notNull()
+      .default(0),
+
+    createdAt: timestamp(
+      "created_at",
+      { withTimezone: true }
+    )
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp(
+      "updated_at",
+      { withTimezone: true }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationWorkflowStages = pgTable(
+  "application_workflow_stages",
+  {
+    id: text("id").primaryKey(),
+    guildId: text("guild_id").notNull(),
+    formId: text("form_id").notNull(),
+
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+
+    position: integer("position")
+      .notNull()
+      .default(0),
+
+    stageType: text("stage_type")
+      .notNull()
+      .default("review"),
+
+    terminal: boolean("terminal")
+      .notNull()
+      .default(false),
+
+    createdAt: timestamp(
+      "created_at",
+      { withTimezone: true }
+    )
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp(
+      "updated_at",
+      { withTimezone: true }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationAutomationRules = pgTable(
+  "application_automation_rules",
+  {
+    id: text("id").primaryKey(),
+    guildId: text("guild_id").notNull(),
+    formId: text("form_id"),
+
+    name: text("name").notNull(),
+
+    enabled: boolean("enabled")
+      .notNull()
+      .default(true),
+
+    triggerType: text("trigger_type")
+      .notNull(),
+
+    triggerConfig: jsonb("trigger_config")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+
+    conditions: jsonb("conditions")
+      .$type<
+        Array<Record<string, unknown>>
+      >()
+      .notNull()
+      .default([]),
+
+    actions: jsonb("actions")
+      .$type<
+        Array<Record<string, unknown>>
+      >()
+      .notNull()
+      .default([]),
+
+    createdAt: timestamp(
+      "created_at",
+      { withTimezone: true }
+    )
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp(
+      "updated_at",
+      { withTimezone: true }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationPermissionGroups = pgTable(
+  "application_permission_groups",
+  {
+    id: text("id").primaryKey(),
+    guildId: text("guild_id").notNull(),
+    formId: text("form_id"),
+
+    name: text("name").notNull(),
+
+    roleIds: jsonb("role_ids")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+
+    permissions: jsonb("permissions")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+
+    createdAt: timestamp(
+      "created_at",
+      { withTimezone: true }
+    )
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp(
+      "updated_at",
+      { withTimezone: true }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationNotificationRules = pgTable(
+  "application_notification_rules",
+  {
+    id: text("id").primaryKey(),
+    guildId: text("guild_id").notNull(),
+    formId: text("form_id"),
+
+    event: text("event").notNull(),
+
+    enabled: boolean("enabled")
+      .notNull()
+      .default(true),
+
+    channelId: text("channel_id"),
+
+    pingApplicant: boolean("ping_applicant")
+      .notNull()
+      .default(false),
+
+    pingRoleIds: jsonb("ping_role_ids")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+
+    embedTitle: text("embed_title"),
+    embedDescription: text("embed_description"),
+    embedFooter: text("embed_footer"),
+    embedColor: text("embed_color"),
+
+    createdAt: timestamp(
+      "created_at",
+      { withTimezone: true }
+    )
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp(
+      "updated_at",
+      { withTimezone: true }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationApplicantNotes = pgTable(
+  "application_applicant_notes",
+  {
+    id: text("id").primaryKey(),
+    guildId: text("guild_id").notNull(),
+    applicantUserId: text(
+      "applicant_user_id"
+    ).notNull(),
+
+    authorUserId: text(
+      "author_user_id"
+    ).notNull(),
+
+    authorUsername: text(
+      "author_username"
+    ).notNull(),
+
+    note: text("note").notNull(),
+
+    createdAt: timestamp(
+      "created_at",
+      { withTimezone: true }
+    )
+      .notNull()
+      .defaultNow(),
+  }
+);
+
+export const applicationFormBranding = pgTable(
+  "application_form_branding",
+  {
+    formId: text("form_id").primaryKey(),
+    guildId: text("guild_id").notNull(),
+
+    accentColor: text("accent_color"),
+    logoUrl: text("logo_url"),
+    bannerUrl: text("banner_url"),
+
+    headerTitle: text("header_title"),
+    headerSubtitle: text("header_subtitle"),
+
+    submitButtonLabel: text(
+      "submit_button_label"
+    ),
+
+    successTitle: text("success_title"),
+    successMessage: text("success_message"),
+
+    updatedAt: timestamp(
+      "updated_at",
+      { withTimezone: true }
     )
       .notNull()
       .defaultNow(),

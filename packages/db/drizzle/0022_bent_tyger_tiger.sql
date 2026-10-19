@@ -1,0 +1,1 @@
+ALTER TABLE "application_questions" ADD COLUMN "section_id" text;
