@@ -1409,12 +1409,6 @@ export default function ApplicationsWorkspace({
                     </h2>
                   </div>
 
-                  <a
-                    href={`/applications/${guildId}`}
-                    className="rounded-xl bg-white px-4 py-2.5 text-center text-sm font-semibold text-black"
-                  >
-                    Open Existing Editor
-                  </a>
                 </div>
 
                 <div className="mt-8 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">

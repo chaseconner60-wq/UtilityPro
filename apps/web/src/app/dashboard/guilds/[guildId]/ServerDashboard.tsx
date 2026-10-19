@@ -696,7 +696,7 @@ export default function ServerDashboard({
 
                     <div className="flex flex-wrap gap-3">
                       <a
-                        href={`/applications/${guildId}`}
+                        href={`/applications/${guildId}/workspace`}
                         className="rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400"
                       >
                         Manage Applications
