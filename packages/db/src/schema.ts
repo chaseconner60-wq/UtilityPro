@@ -41,6 +41,19 @@ export const globalSettings = pgTable("global_settings", {
     .notNull()
     .default(false),
 
+  moduleControls: jsonb("module_controls")
+    .$type<
+      Record<
+        string,
+        {
+          enabled: boolean;
+          message: string;
+        }
+      >
+    >()
+    .notNull()
+    .default({}),
+
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

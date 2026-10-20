@@ -106,6 +106,76 @@ async function getGlobalSettings() {
   return settings;
 }
 
+const DEFAULT_APPLICATIONS_MAINTENANCE_MESSAGE =
+  "Applications are temporarily unavailable while UtilityX is being updated. Please check back shortly.";
+
+function isApplicationRequest(
+  url: string
+) {
+  const path =
+    url.split("?")[0];
+
+  return (
+    path ===
+      "/applications" ||
+    path.startsWith(
+      "/applications/"
+    ) ||
+    path ===
+      "/internal/applications" ||
+    path.startsWith(
+      "/internal/applications/"
+    )
+  );
+}
+
+app.addHook(
+  "onRequest",
+  async (
+    request,
+    reply
+  ) => {
+    if (
+      !isApplicationRequest(
+        request.url
+      )
+    ) {
+      return;
+    }
+
+    const settings =
+      await getGlobalSettings();
+
+    const control =
+      settings.moduleControls
+        ?.applications;
+
+    if (
+      control?.enabled !==
+      false
+    ) {
+      return;
+    }
+
+    const message =
+      control.message?.trim() ||
+      DEFAULT_APPLICATIONS_MAINTENANCE_MESSAGE;
+
+    return reply
+      .code(503)
+      .send({
+        error:
+          message,
+
+        code:
+          "MODULE_DISABLED",
+
+        module:
+          "applications",
+      });
+  }
+);
+
 app.get("/health", async () => {
   return {
     status: "ok",
@@ -244,6 +314,8 @@ app.get("/global-status", async () => {
   return {
     maintenanceEnabled: settings.maintenanceEnabled,
     maintenanceMessage: settings.maintenanceMessage,
+    moduleControls:
+      settings.moduleControls ?? {},
   };
 });
 
@@ -271,6 +343,14 @@ app.patch<{
   Body: {
     maintenanceEnabled?: boolean;
     maintenanceMessage?: string;
+
+    moduleControls?: Record<
+      string,
+      {
+        enabled?: boolean;
+        message?: string;
+      }
+    >;
   };
 }>(
   "/internal/global-settings",
@@ -308,11 +388,107 @@ app.patch<{
       });
     }
 
+    const allowedModules = new Set([
+      "applications",
+      "erlc",
+      "tickets",
+      "moderation",
+      "giveaways",
+      "welcome_logging",
+    ]);
+
+    const moduleControls: Record<
+      string,
+      {
+        enabled: boolean;
+        message: string;
+      }
+    > = {
+      ...(
+        current.moduleControls ??
+        {}
+      ),
+    };
+
+    if (request.body?.moduleControls) {
+      for (
+        const [
+          moduleKey,
+          incoming,
+        ]
+        of Object.entries(
+          request.body.moduleControls
+        )
+      ) {
+        if (
+          !allowedModules.has(
+            moduleKey
+          )
+        ) {
+          return reply
+            .code(400)
+            .send({
+              error:
+                `Unknown UtilityX module: ${moduleKey}`,
+            });
+        }
+
+        const existing =
+          moduleControls[
+            moduleKey
+          ] ?? {
+            enabled: true,
+            message: "",
+          };
+
+        const enabled =
+          incoming.enabled ??
+          existing.enabled;
+
+        const message =
+          incoming.message !==
+          undefined
+            ? incoming.message.trim()
+            : existing.message;
+
+        if (
+          typeof enabled !==
+          "boolean"
+        ) {
+          return reply
+            .code(400)
+            .send({
+              error:
+                "Invalid module availability value.",
+            });
+        }
+
+        if (
+          message.length > 500
+        ) {
+          return reply
+            .code(400)
+            .send({
+              error:
+                "Module maintenance messages must be 500 characters or less.",
+            });
+        }
+
+        moduleControls[
+          moduleKey
+        ] = {
+          enabled,
+          message,
+        };
+      }
+    }
+
     const [settings] = await db
       .update(globalSettings)
       .set({
         maintenanceEnabled,
         maintenanceMessage,
+        moduleControls,
         updatedAt: new Date(),
       })
       .where(eq(globalSettings.id, "global"))

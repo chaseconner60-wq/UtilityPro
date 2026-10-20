@@ -330,6 +330,15 @@ export default function ApplicationsWorkspace({
       string | null
     >(null);
 
+  const [
+    moduleUnavailable,
+    setModuleUnavailable,
+  ] =
+    useState<string | null>(
+      null
+    );
+
+
   useEffect(() => {
     void params.then(
       ({ guildId }) =>
@@ -360,6 +369,19 @@ export default function ApplicationsWorkspace({
 
         const payload =
           await response.json();
+
+        if (
+          response.status === 503 &&
+          payload.code === "MODULE_DISABLED" &&
+          payload.module === "applications"
+        ) {
+          setModuleUnavailable(
+            payload.error ||
+              "Applications are temporarily unavailable. Please check back shortly."
+          );
+
+          return;
+        }
 
         if (
           !response.ok
@@ -1092,7 +1114,29 @@ export default function ApplicationsWorkspace({
           </header>
 
           <div className="mx-auto max-w-[1500px] p-5 md:p-8 xl:p-10">
-            {error ? (
+            {moduleUnavailable ? (
+              <div className="rounded-3xl border border-amber-400/15 bg-amber-400/[0.045] p-8 md:p-10">
+                <div className="max-w-2xl">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300/70">
+                    UtilityX Module Maintenance
+                  </p>
+
+                  <h2 className="mt-3 text-3xl font-semibold tracking-tight">
+                    Applications Temporarily Unavailable
+                  </h2>
+
+                  <p className="mt-4 text-sm leading-7 text-zinc-400">
+                    {moduleUnavailable}
+                  </p>
+
+                  <div className="mt-6 rounded-2xl border border-white/[0.05] bg-black/20 p-4">
+                    <p className="text-xs leading-5 text-zinc-600">
+                      Application forms, submissions, reviews, and applicant management are temporarily locked. Existing data remains stored normally.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : error ? (
               <div className="rounded-2xl border border-red-400/15 bg-red-400/[0.05] p-5 text-sm text-red-300">
                 {error}
               </div>
@@ -1107,6 +1151,7 @@ export default function ApplicationsWorkspace({
             ) : null}
 
             {!loading &&
+            !moduleUnavailable &&
             activeSection ===
               "overview" ? (
               <>
@@ -1395,6 +1440,7 @@ export default function ApplicationsWorkspace({
             ) : null}
 
             {!loading &&
+            !moduleUnavailable &&
             activeSection ===
               "forms" ? (
               <div>
@@ -1474,6 +1520,7 @@ export default function ApplicationsWorkspace({
             ) : null}
 
             {!loading &&
+            !moduleUnavailable &&
             activeSection ===
               "reviews" ? (
               <div>
@@ -1769,6 +1816,7 @@ export default function ApplicationsWorkspace({
             ) : null}
 
             {!loading &&
+            !moduleUnavailable &&
             ![
               "overview",
               "forms",

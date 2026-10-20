@@ -56,6 +56,15 @@ export default function ApplicationPortalPage() {
   ] =
     useState("");
 
+  const [
+    moduleUnavailable,
+    setModuleUnavailable,
+  ] =
+    useState<string | null>(
+      null
+    );
+
+
   useEffect(() => {
     void (
       async () => {
@@ -71,6 +80,19 @@ export default function ApplicationPortalPage() {
 
           const data =
             await response.json();
+
+          if (
+            response.status === 503 &&
+            data.code === "MODULE_DISABLED" &&
+            data.module === "applications"
+          ) {
+            setModuleUnavailable(
+              data.error ||
+                "Applications are temporarily unavailable. Please check back shortly."
+            );
+
+            return;
+          }
 
           if (!response.ok) {
             throw new Error(
@@ -141,6 +163,26 @@ export default function ApplicationPortalPage() {
           </p>
         )}
 
+        {moduleUnavailable && (
+          <div className="mt-8 rounded-3xl border border-amber-400/15 bg-amber-400/[0.045] p-8">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300/70">
+              UtilityX Service Notice
+            </p>
+
+            <h2 className="mt-3 text-2xl font-semibold">
+              Applications Temporarily Unavailable
+            </h2>
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
+              {moduleUnavailable}
+            </p>
+
+            <p className="mt-5 text-xs text-zinc-600">
+              No application data has been lost. Please try again later.
+            </p>
+          </div>
+        )}
+
         {error && (
           <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/[0.05] p-4 text-sm text-red-300">
             {error}
@@ -148,7 +190,8 @@ export default function ApplicationPortalPage() {
         )}
 
         {!loading &&
-          !error && (
+          !error &&
+          !moduleUnavailable && (
           <div className="mt-7 grid gap-4 md:grid-cols-2">
             {forms.length ? (
               forms.map(

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import MaintenanceControls from "./MaintenanceControls";
+import ModuleControls from "./ModuleControls";
 import OwnerOperations from "./OwnerOperations";
 
 type Guild = {
@@ -21,6 +22,7 @@ type OverviewData = {
 type Section =
   | "overview"
   | "maintenance"
+  | "modules"
   | "servers"
   | "system";
 
@@ -84,6 +86,11 @@ export default function AdminDashboardClient({
       id: "maintenance",
       label: "Maintenance",
       description: "Global bot availability",
+    },
+    {
+      id: "modules",
+      label: "Modules",
+      description: "Feature availability",
     },
     {
       id: "servers",
@@ -352,6 +359,24 @@ export default function AdminDashboardClient({
                 </p>
 
                 <MaintenanceControls />
+              </>
+            )}
+
+            {section === "modules" && (
+              <>
+                <p className="text-sm font-medium text-indigo-400">
+                  Availability Controls
+                </p>
+
+                <h2 className="mt-2 text-3xl font-bold">
+                  UtilityX Modules
+                </h2>
+
+                <p className="mt-3 max-w-2xl text-zinc-400">
+                  Temporarily disable individual UtilityX systems during updates, maintenance, or service interruptions without taking the entire bot offline.
+                </p>
+
+                <ModuleControls />
               </>
             )}
 

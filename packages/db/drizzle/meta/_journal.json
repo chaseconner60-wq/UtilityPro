@@ -169,6 +169,13 @@
       "when": 1792374410554,
       "tag": "0023_stiff_groot",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792530381530,
+      "tag": "0024_glorious_selene",
+      "breakpoints": true
     }
   ]
 }

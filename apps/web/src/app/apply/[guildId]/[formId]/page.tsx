@@ -11,6 +11,7 @@ import {
 
 type Question = {
   id: string;
+  sectionId: string | null;
   label: string;
   description: string | null;
   type:
@@ -27,6 +28,13 @@ type Form = {
   id: string;
   name: string;
   description: string | null;
+};
+
+type FormSection = {
+  id: string;
+  title: string;
+  description: string | null;
+  position: number;
 };
 
 export default function ApplicationFormPage() {
@@ -54,6 +62,12 @@ export default function ApplicationFormPage() {
     setQuestions,
   ] =
     useState<Question[]>([]);
+
+  const [
+    sections,
+    setSections,
+  ] =
+    useState<FormSection[]>([]);
 
   const [
     answers,
@@ -87,6 +101,15 @@ export default function ApplicationFormPage() {
     useState("");
 
   const [
+    moduleUnavailable,
+    setModuleUnavailable,
+  ] =
+    useState<string | null>(
+      null
+    );
+
+
+  const [
     submitted,
     setSubmitted,
   ] =
@@ -108,6 +131,19 @@ export default function ApplicationFormPage() {
           const data =
             await response.json();
 
+          if (
+            response.status === 503 &&
+            data.code === "MODULE_DISABLED" &&
+            data.module === "applications"
+          ) {
+            setModuleUnavailable(
+              data.error ||
+                "Applications are temporarily unavailable. Please check back shortly."
+            );
+
+            return;
+          }
+
           if (!response.ok) {
             throw new Error(
               data.error ||
@@ -121,6 +157,11 @@ export default function ApplicationFormPage() {
 
           setQuestions(
             data.questions ??
+            []
+          );
+
+          setSections(
+            data.sections ??
             []
           );
         } catch (error) {
@@ -140,6 +181,77 @@ export default function ApplicationFormPage() {
     guildId,
     formId,
   ]);
+
+  function renderQuestion(
+    question: Question,
+    number: number
+  ) {
+    return (
+      <div
+        key={
+          question.id
+        }
+        className="rounded-3xl border border-white/[0.07] bg-white/[0.018] p-6"
+      >
+        <p className="font-semibold">
+          {number}.{" "}
+          {
+            question.label
+          }
+
+          {question.required && (
+            <span className="ml-1 text-red-400">
+              *
+            </span>
+          )}
+        </p>
+
+        {question.description && (
+          <p className="mt-2 text-xs leading-5 text-zinc-600">
+            {
+              question.description
+            }
+          </p>
+        )}
+
+        <div className="mt-4">
+          <QuestionInput
+            question={
+              question
+            }
+            value={
+              answers[
+                question.id
+              ]
+            }
+            onChange={(value) =>
+              setAnswers(
+                (
+                  current
+                ) => ({
+                  ...current,
+
+                  [question.id]:
+                    value,
+                })
+              )
+            }
+          />
+        </div>
+      </div>
+    );
+  }
+
+  function questionsForSection(
+    sectionId: string | null
+  ) {
+    return questions.filter(
+      (question) =>
+        (question.sectionId ??
+          null) ===
+        sectionId
+    );
+  }
 
   async function submit() {
     setSubmitting(
@@ -195,6 +307,19 @@ export default function ApplicationFormPage() {
         return;
       }
 
+      if (
+        response.status === 503 &&
+        data.code === "MODULE_DISABLED" &&
+        data.module === "applications"
+      ) {
+        setModuleUnavailable(
+          data.error ||
+            "Applications are temporarily unavailable. Please check back shortly."
+        );
+
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(
           data.error ||
@@ -222,6 +347,39 @@ export default function ApplicationFormPage() {
     return (
       <main className="min-h-screen bg-[#07080b] p-10 text-zinc-500">
         Loading application...
+      </main>
+    );
+  }
+
+  if (moduleUnavailable) {
+    return (
+      <main className="min-h-screen bg-[#07080b] px-5 py-16 text-white">
+        <div className="mx-auto max-w-xl">
+          <a
+            href={`/apply/${guildId}`}
+            className="text-sm text-zinc-500 transition hover:text-white"
+          >
+            ← Back to Applications
+          </a>
+
+          <div className="mt-8 rounded-3xl border border-amber-400/15 bg-amber-400/[0.045] p-9">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300/70">
+              UtilityX Service Notice
+            </p>
+
+            <h1 className="mt-3 text-3xl font-bold">
+              Applications Temporarily Unavailable
+            </h1>
+
+            <p className="mt-4 text-sm leading-7 text-zinc-400">
+              {moduleUnavailable}
+            </p>
+
+            <p className="mt-6 text-xs leading-5 text-zinc-600">
+              Your server has temporarily paused the Applications module through UtilityX.
+            </p>
+          </div>
+        </div>
       </main>
     );
   }
@@ -279,66 +437,109 @@ export default function ApplicationFormPage() {
           </div>
         )}
 
-        <div className="mt-5 space-y-4">
-          {questions.map(
+        <div className="mt-6 space-y-7">
+          {sections.map(
             (
-              question,
-              index
-            ) => (
-              <div
-                key={
-                  question.id
-                }
-                className="rounded-3xl border border-white/[0.07] bg-white/[0.018] p-6"
-              >
-                <p className="font-semibold">
-                  {index + 1}.{" "}
-                  {
-                    question.label
+              section,
+              sectionIndex
+            ) => {
+              const sectionQuestions =
+                questionsForSection(
+                  section.id
+                );
+
+              if (
+                !sectionQuestions.length
+              ) {
+                return null;
+              }
+
+              return (
+                <section
+                  key={
+                    section.id
                   }
+                >
+                  <div className="mb-4 rounded-3xl border border-violet-400/10 bg-violet-400/[0.035] px-6 py-5">
+                    <div className="flex items-start gap-4">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-violet-400/10 bg-violet-400/[0.05] text-xs font-semibold text-violet-300">
+                        {sectionIndex +
+                          1}
+                      </div>
 
-                  {question.required && (
-                    <span className="ml-1 text-red-400">
-                      *
-                    </span>
-                  )}
-                </p>
+                      <div>
+                        <h2 className="text-lg font-semibold text-zinc-100">
+                          {
+                            section.title
+                          }
+                        </h2>
 
-                {question.description && (
-                  <p className="mt-2 text-xs leading-5 text-zinc-600">
-                    {
-                      question.description
-                    }
-                  </p>
-                )}
+                        {section.description ? (
+                          <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-zinc-500">
+                            {
+                              section.description
+                            }
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
 
-                <div className="mt-4">
-                  <QuestionInput
-                    question={
-                      question
-                    }
-                    value={
-                      answers[
-                        question.id
-                      ]
-                    }
-                    onChange={(value) =>
-                      setAnswers(
-                        (
-                          current
-                        ) => ({
-                          ...current,
-
-                          [question.id]:
-                            value,
-                        })
-                      )
-                    }
-                  />
-                </div>
-              </div>
-            )
+                  <div className="space-y-4">
+                    {sectionQuestions.map(
+                      (
+                        question,
+                        index
+                      ) =>
+                        renderQuestion(
+                          question,
+                          index + 1
+                        )
+                    )}
+                  </div>
+                </section>
+              );
+            }
           )}
+
+          {questionsForSection(
+            null
+          ).length ? (
+            <section>
+              {sections.length ? (
+                <div className="mb-4 rounded-3xl border border-white/[0.06] bg-white/[0.015] px-6 py-5">
+                  <h2 className="text-lg font-semibold text-zinc-200">
+                    Additional Questions
+                  </h2>
+
+                  <p className="mt-1 text-sm text-zinc-600">
+                    Complete the remaining questions below.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="space-y-4">
+                {questionsForSection(
+                  null
+                ).map(
+                  (
+                    question,
+                    index
+                  ) =>
+                    renderQuestion(
+                      question,
+                      index + 1
+                    )
+                )}
+              </div>
+            </section>
+          ) : null}
+
+          {!questions.length ? (
+            <div className="rounded-3xl border border-dashed border-white/[0.07] px-6 py-12 text-center text-sm text-zinc-600">
+              This application does not have any questions yet.
+            </div>
+          ) : null}
         </div>
 
         <button
